@@ -752,30 +752,92 @@ def time_series(df):
 def insights():
     st.header("Key Insights & Recommendations")
     
-    st.markdown("""
+    if 'data' not in st.session_state:
+        st.warning("Please upload data in the Introduction section first to generate insights.")
+        return
+    
+    df = st.session_state['data']
+    
+    # Calculate key metrics for the insights
+    total_views = len(df)
+    unique_shifts = df['shift_id'].nunique()
+    unique_workers = df['worker_id'].nunique()
+    unique_workplaces = df['workplace_id'].nunique()
+    claimed_shifts = df['claimed_at'].notna().sum()
+    conversion_rate = (claimed_shifts / total_views * 100).round(2)
+    verified_shifts = df['is_verified'].sum()
+    fulfillment_rate = (verified_shifts / claimed_shifts * 100).round(2) if claimed_shifts > 0 else 0
+    
+    # Calculate worker activity distribution
+    worker_claims = df.groupby('worker_id')['claimed_at'].apply(lambda x: x.notna().sum()).reset_index()
+    worker_claims.columns = ['worker_id', 'claims_count']
+    active_workers = len(worker_claims[worker_claims['claims_count'] > 0])
+    top_20_pct_claims = worker_claims.sort_values('claims_count', ascending=False)
+    top_workers_threshold = int(unique_workers * 0.2)
+    top_workers_claim_share = (top_20_pct_claims.head(top_workers_threshold)['claims_count'].sum() / claimed_shifts * 100).round(2)
+    
+    # Calculate time slot conversion rates
+    slot_conv = df.groupby('slot').agg(
+        views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum())
+    ).reset_index()
+    slot_conv['conversion_rate'] = (slot_conv['claims'] / slot_conv['views'] * 100).round(2)
+    best_slot = slot_conv.loc[slot_conv['conversion_rate'].idxmax()]
+    worst_slot = slot_conv.loc[slot_conv['conversion_rate'].idxmin()]
+    
+    # Calculate lead time impact
+    df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
+    lead_time_bins = [0, 24, 48, 72, 168, float('inf')]
+    lead_time_labels = ['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days']
+    df['lead_time_bin'] = pd.cut(df['lead_time_hours'], bins=lead_time_bins, labels=lead_time_labels)
+    lead_conv = df.groupby('lead_time_bin').agg(
+        views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum())
+    ).reset_index()
+    lead_conv['conversion_rate'] = (lead_conv['claims'] / lead_conv['views'] * 100).round(2)
+    best_lead_time = lead_conv.loc[lead_conv['conversion_rate'].idxmax()]
+    
+    # Calculate rate sensitivity
+    df['pay_rate_bin'] = pd.cut(df['pay_rate'], 
+                              bins=[0, 20, 25, 30, 35, float('inf')],
+                              labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
+    rate_conv = df.groupby('pay_rate_bin').agg(
+        views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum())
+    ).reset_index()
+    rate_conv['conversion_rate'] = (rate_conv['claims'] / rate_conv['views'] * 100).round(2)
+    best_rate = rate_conv.loc[rate_conv['conversion_rate'].idxmax()]
+    
+    # Generate the insights markdown
+    st.markdown(f"""
     ## Summary of Findings
     
     Based on the analysis of the CBH marketplace data, here are the key insights:
     
+    ### Market Overview
+    - **Market Size**: The dataset contains {total_views:,} shift views across {unique_shifts:,} unique shifts, with {unique_workers:,} workers and {unique_workplaces:,} workplaces.
+    - **Conversion Performance**: Overall marketplace conversion rate is {conversion_rate}%, with {claimed_shifts:,} claimed shifts out of {total_views:,} views.
+    - **Fulfillment Rate**: {fulfillment_rate}% of claimed shifts were successfully completed (verified).
+    
     ### Marketplace Dynamics
-    - **Conversion Rate**: The overall marketplace conversion rate is calculated as the percentage of views that lead to claims.
-    - **Time Slot Preferences**: Different time slots show varying levels of popularity and conversion rates.
-    - **Lead Time Impact**: The time between shift posting and start date significantly affects conversion rates.
+    - **Conversion Rate**: The overall marketplace conversion rate is {conversion_rate}%, which represents the percentage of views that lead to claims.
+    - **Time Slot Preferences**: The {best_slot['slot']} time slot has the highest conversion rate at {best_slot['conversion_rate']}%, while the {worst_slot['slot']} time slot has the lowest at {worst_slot['conversion_rate']}%.
+    - **Lead Time Impact**: Shifts posted {best_lead_time['lead_time_bin']} before the start date show the best conversion rate at {best_lead_time['conversion_rate']}%, suggesting an optimal posting window.
     
     ### Worker Behavior
-    - **Activity Distribution**: A small percentage of workers claim the majority of shifts.
-    - **Reliability Metrics**: Worker reliability can be measured by completion rates, cancellation rates, and no-show rates.
-    - **Rate Sensitivity**: Worker response to different pay rates shows clear patterns that can inform pricing strategy.
+    - **Activity Distribution**: Top 20% of workers account for {top_workers_claim_share}% of all claimed shifts, showing a concentration of activity among power users.
+    - **Active Worker Base**: Out of {unique_workers:,} workers who viewed shifts, {active_workers:,} ({(active_workers/unique_workers*100).round(2)}%) claimed at least one shift.
+    - **Rate Sensitivity**: The highest conversion rate of {best_rate['conversion_rate']}% occurs in the {best_rate['pay_rate_bin']} pay rate range, indicating a sweet spot for worker engagement.
     
     ### Workplace Patterns
-    - **Volume Distribution**: Workplaces vary widely in the number of shifts they post.
-    - **Fill Rates**: Some workplaces consistently achieve higher fill rates than others.
-    - **Posting Behavior**: The timing of shift posting has a significant impact on fill success.
+    - **Volume Distribution**: Workplaces vary widely in the number of shifts they post, with some being significantly more active than others.
+    - **Fill Rates**: There are notable differences in fill rates across workplaces, suggesting varying levels of attractiveness to workers.
+    - **Posting Strategy**: Workplace posting timing and lead time have significant impacts on fill success, with optimal lead times showing better performance.
     
     ### Rate & Pricing
-    - **Pricing Effectiveness**: Higher pay rates generally correlate with higher conversion rates, but with diminishing returns.
-    - **Markup Optimization**: Different time slots and shift types support different markup percentages.
-    - **Rate Competitiveness**: Market rates show patterns that can inform dynamic pricing strategies.
+    - **Pricing Effectiveness**: Pay rates in the {best_rate['pay_rate_bin']} range show the highest conversion at {best_rate['conversion_rate']}%, but with diminishing returns at higher rates.
+    - **Markup Optimization**: Different time slots and shift types support different markup percentages, allowing for optimization.
+    - **Competitive Positioning**: Market rates show clear patterns that can inform dynamic pricing strategies to maximize both conversion and margin.
     
     ## Recommendations
     
