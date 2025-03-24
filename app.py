@@ -1011,6 +1011,9 @@ def rate_analysis(df):
     best_complete_rate = rate_conv.loc[rate_conv['overall_conversion'].idxmax(), 'pay_rate_bin']
     best_complete_pct = rate_conv.loc[rate_conv['overall_conversion'].idxmax(), 'overall_conversion']
     
+    # Calculate average claim to complete rate across all pay rates
+    claim_to_complete_rate = (rate_conv['completed'].sum() / rate_conv['claimed'].sum() * 100).round(1)
+    
     # Calculate elasticity
     high_rate_conversion = df[df['pay_rate'] > 30]['claimed_at'].notna().mean() * 100
     low_rate_conversion = df[df['pay_rate'] <= 30]['claimed_at'].notna().mean() * 100
