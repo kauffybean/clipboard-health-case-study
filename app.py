@@ -158,27 +158,28 @@ st.markdown("""
 def load_and_clean_data(file_path):
     """Load and clean the dataset with caching for better performance"""
     try:
-        # Read the CSV file
-        df = pd.read_csv(file_path)
+        # Read the CSV file with optimized settings for memory usage
+        # Use dtype optimization and parse dates during loading
+        date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 'claimed_at', 'deleted_at', 'canceled_at']
+        bool_columns = ['is_ncns', 'is_verified']
+        
+        # Create dtype dictionary for optimization
+        dtypes = {}
+        for col in bool_columns:
+            dtypes[col] = 'bool'
+            
+        # Use low_memory=False to prevent mixed type warnings
+        df = pd.read_csv(file_path, 
+                         parse_dates=date_columns,
+                         dtype=dtypes,
+                         low_memory=False)
         
         # Convert all column names to lowercase
         df.columns = [col.lower() for col in df.columns]
         
-        # Convert date columns to datetime
-        date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 'claimed_at', 'deleted_at', 'canceled_at']
-        for col in date_columns:
-            if col in df.columns:
-                df[col] = pd.to_datetime(df[col])
-        
-        # Calculate lead time in hours
+        # Calculate lead time in hours more efficiently
         if 'shift_start_at' in df.columns and 'shift_created_at' in df.columns:
             df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
-        
-        # Convert boolean columns
-        bool_columns = ['is_ncns', 'is_verified']
-        for col in bool_columns:
-            if col in df.columns:
-                df[col] = df[col].astype(bool)
         
         # Rename some columns for clarity
         column_mapping = {
@@ -189,6 +190,10 @@ def load_and_clean_data(file_path):
         
         df = df.rename(columns=column_mapping)
         
+        # Force garbage collection to free memory
+        import gc
+        gc.collect()
+        
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -197,7 +202,24 @@ def load_and_clean_data(file_path):
 # Get the dataset when needed - loaded only once thanks to caching
 @st.cache_data
 def get_data():
-    return load_and_clean_data("attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv")
+    # Try the full dataset first
+    try:
+        main_file = "attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv"
+        if os.path.exists(main_file):
+            return load_and_clean_data(main_file)
+    except Exception as e:
+        st.warning(f"Error loading main dataset: {e}")
+        
+    # Fall back to smaller deployment dataset if necessary
+    try:
+        deployment_file = "attached_assets/deployment_dataset.csv"
+        if os.path.exists(deployment_file):
+            return load_and_clean_data(deployment_file)
+    except Exception as e:
+        st.error(f"Error loading deployment dataset: {e}")
+        
+    # Return empty DataFrame if all attempts fail
+    return pd.DataFrame()
 
 # Define sections for the wizard
 SECTIONS = [
