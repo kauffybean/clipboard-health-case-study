@@ -10,8 +10,8 @@ def load_and_clean_data(uploaded_file):
     
     Parameters:
     -----------
-    uploaded_file : UploadedFile
-        The CSV file uploaded by the user
+    uploaded_file : UploadedFile, str, or StringIO
+        The CSV file uploaded by the user or path to CSV file
         
     Returns:
     --------
@@ -20,6 +20,9 @@ def load_and_clean_data(uploaded_file):
     """
     # Load data from CSV
     df = pd.read_csv(uploaded_file)
+    
+    # Convert all column names to lowercase for consistency
+    df.columns = [col.lower() for col in df.columns]
     
     # Check if required columns exist
     required_columns = ['shift_id', 'worker_id', 'workplace_id', 'shift_start_at', 
@@ -42,6 +45,10 @@ def load_and_clean_data(uploaded_file):
     
     for col in bool_columns:
         if col in df.columns:
+            # Handle various representations of boolean values
+            if df[col].dtype == object:
+                # Convert string representations to actual boolean values
+                df[col] = df[col].map({'TRUE': True, 'FALSE': False, 'True': True, 'False': False})
             df[col] = df[col].astype(bool)
     
     # Ensure numeric columns are properly typed

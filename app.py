@@ -1080,11 +1080,12 @@ def main():
         try:
             with st.spinner("Loading CBH marketplace data for analysis..."):
                 data_file = "attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv"
-                df = pd.read_csv(data_file)
-                df = load_and_clean_data(io.StringIO(df.to_csv(index=False)))
+                # Load data directly from the file
+                df = load_and_clean_data(data_file)
                 st.session_state['data'] = df
         except Exception as e:
             st.error(f"Error loading case study data: {str(e)}")
+            st.error(f"Make sure the file exists and has the required columns (SHIFT_ID, WORKER_ID, etc.).")
     
     # Create sidebar for navigation
     st.sidebar.title("Navigation")
