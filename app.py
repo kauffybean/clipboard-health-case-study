@@ -209,7 +209,7 @@ for i, section in enumerate(SECTIONS):
         button_type = "primary"
     elif section_id in st.session_state.completed_sections:
         button_text = f"{section_name}"
-        button_type = "success"
+        button_type = "secondary"
     else:
         button_text = f"{section_name}"
         button_type = "secondary"
