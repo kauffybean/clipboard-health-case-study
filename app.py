@@ -153,44 +153,51 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Helper function to load data
+# Helper function to load data with caching
+@st.cache_data(ttl=3600)  # Cache data for 1 hour
 def load_and_clean_data(file_path):
-    """Load and clean the dataset"""
-    # Read the CSV file
-    df = pd.read_csv(file_path)
-    
-    # Convert all column names to lowercase
-    df.columns = [col.lower() for col in df.columns]
-    
-    # Convert date columns to datetime
-    date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 'claimed_at', 'deleted_at', 'canceled_at']
-    for col in date_columns:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col])
-    
-    # Calculate lead time in hours
-    if 'shift_start_at' in df.columns and 'shift_created_at' in df.columns:
-        df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
-    
-    # Convert boolean columns
-    bool_columns = ['is_ncns', 'is_verified']
-    for col in bool_columns:
-        if col in df.columns:
-            df[col] = df[col].astype(bool)
-    
-    # Rename some columns for clarity
-    column_mapping = {
-        'shift_start_at': 'shift_date',
-        'shift_created_at': 'created_at',
-        'offer_viewed_at': 'viewed_at'
-    }
-    
-    df = df.rename(columns=column_mapping)
-    
-    return df
+    """Load and clean the dataset with caching for better performance"""
+    try:
+        # Read the CSV file
+        df = pd.read_csv(file_path)
+        
+        # Convert all column names to lowercase
+        df.columns = [col.lower() for col in df.columns]
+        
+        # Convert date columns to datetime
+        date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 'claimed_at', 'deleted_at', 'canceled_at']
+        for col in date_columns:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col])
+        
+        # Calculate lead time in hours
+        if 'shift_start_at' in df.columns and 'shift_created_at' in df.columns:
+            df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
+        
+        # Convert boolean columns
+        bool_columns = ['is_ncns', 'is_verified']
+        for col in bool_columns:
+            if col in df.columns:
+                df[col] = df[col].astype(bool)
+        
+        # Rename some columns for clarity
+        column_mapping = {
+            'shift_start_at': 'shift_date',
+            'shift_created_at': 'created_at',
+            'offer_viewed_at': 'viewed_at'
+        }
+        
+        df = df.rename(columns=column_mapping)
+        
+        return df
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame()  # Return empty DataFrame on error
 
-# Load the dataset
-df = load_and_clean_data("attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv")
+# Get the dataset when needed - loaded only once thanks to caching
+@st.cache_data
+def get_data():
+    return load_and_clean_data("attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv")
 
 # Define sections for the wizard
 SECTIONS = [
@@ -1607,20 +1614,24 @@ def main():
     # This approach reduces loading time as we're not pre-rendering all content
     if st.session_state.current_section == "introduction":
         introduction()
-    elif st.session_state.current_section == "data_overview":
-        data_overview(df)
-    elif st.session_state.current_section == "marketplace_dynamics":
-        marketplace_dynamics(df)
-    elif st.session_state.current_section == "worker_analysis":
-        worker_analysis(df)
-    elif st.session_state.current_section == "workplace_analysis":
-        workplace_analysis(df)
-    elif st.session_state.current_section == "rate_analysis":
-        rate_analysis(df)
-    elif st.session_state.current_section == "time_series":
-        time_series(df)
-    elif st.session_state.current_section == "insights":
-        insights()
+    else:
+        # Load data only when we need it, using cached version for performance
+        df = get_data()
+        
+        if st.session_state.current_section == "data_overview":
+            data_overview(df)
+        elif st.session_state.current_section == "marketplace_dynamics":
+            marketplace_dynamics(df)
+        elif st.session_state.current_section == "worker_analysis":
+            worker_analysis(df)
+        elif st.session_state.current_section == "workplace_analysis":
+            workplace_analysis(df)
+        elif st.session_state.current_section == "rate_analysis":
+            rate_analysis(df)
+        elif st.session_state.current_section == "time_series":
+            time_series(df)
+        elif st.session_state.current_section == "insights":
+            insights()
 
 if __name__ == "__main__":
     main()
