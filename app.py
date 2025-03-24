@@ -38,18 +38,30 @@ SECTIONS = {
     "Key Insights & Recommendations": "insights"
 }
 
-# CSS to make the UI consistent and visually appealing
+# CSS to make the UI consistent and visually appealing with a modern SaaS-style design
 st.markdown("""
     <style>
-        /* Define consistent color palette */
+        /* Define consistent color palette - Modern SaaS color scheme */
         :root {
-            --primary-color: #3366CC;     /* Blue for main elements */
-            --secondary-color: #109618;   /* Green for success/completion */
-            --accent-color: #DC3912;      /* Red for highlights/conversion */
-            --neutral-color: #FF9900;     /* Orange for additional metrics */
-            --background-color: #F9FAFC;  /* Light background */
-            --light-gray: #E8EEF4;        /* For alternating rows */
-            --text-color: #333333;        /* Main text color */
+            --primary-color: #4361ee;     /* Primary blue */
+            --primary-light: #e2eafc;     /* Light blue background */
+            --primary-dark: #3a0ca3;      /* Deep blue for emphasis */
+            --secondary-color: #7209b7;   /* Purple for secondary elements */
+            --accent-color: #f72585;      /* Pink for highlights/CTA */
+            --success-color: #4cc9f0;     /* Turquoise for success states */
+            --warning-color: #fcbf49;     /* Amber for warnings */
+            --danger-color: #f72585;      /* Pink for errors */
+            --background-color: #f8f9fa;  /* Light background */
+            --card-bg: #ffffff;           /* Card background */
+            --light-gray: #e9ecef;        /* Border color */
+            --text-color: #2b2d42;        /* Main text color */
+            --text-light: #8d99ae;        /* Secondary text */
+            --radius-sm: 4px;             /* Small border radius */
+            --radius-md: 8px;             /* Medium border radius */
+            --radius-lg: 16px;            /* Large border radius */
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);   /* Small shadow */
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);    /* Medium shadow */
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);  /* Large shadow */
         }
         
         /* Overall layout styling */
@@ -97,54 +109,98 @@ st.markdown("""
             margin-bottom: 1rem;
         }
         
-        /* Key takeaways styling */
+        /* Key takeaways styling - modern design with subtle gradient */
         .key-takeaways {
-            background-color: white;
-            border-left: 5px solid var(--primary-color);
-            padding: 1.5rem;
+            background: linear-gradient(to right, var(--primary-light), white);
+            border-left: 4px solid var(--primary-color);
+            padding: 1.8rem;
             margin-bottom: 2.5rem;
-            border-radius: 0 5px 5px 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
         }
         
         .key-takeaways h4 {
-            color: var(--primary-color);
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--light-gray);
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(67, 97, 238, 0.2);
+            display: flex;
+            align-items: center;
         }
         
-        /* Main finding callout - the "so what" of each section */
+        .key-takeaways h4::before {
+            content: "💡";
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+        }
+        
+        .key-takeaways ul {
+            margin-bottom: 0;
+            padding-left: 1.5rem;
+        }
+        
+        .key-takeaways li {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        
+        .key-takeaways li:last-child {
+            margin-bottom: 0;
+        }
+        
+        .key-takeaways li strong {
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+        
+        /* Main finding callout - the "so what" of each section with modern design */
         .main-finding {
-            background-color: #f0f7ff;
-            border: 2px solid var(--primary-color);
-            border-radius: 8px;
-            padding: 1.2rem 1.5rem;
-            margin: 1.5rem 0;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            background: white;
+            border: 1px solid var(--primary-color);
+            border-radius: var(--radius-md);
+            padding: 1.8rem 1.8rem 1.8rem 2.2rem;
+            margin: 2.5rem 0;
+            box-shadow: var(--shadow-md);
             position: relative;
+            overflow: hidden;
+            transform: translateZ(0); /* For smoother rendering */
         }
         
         .main-finding::before {
-            content: "Key Finding";
+            content: "";
             position: absolute;
-            top: -12px;
-            left: 20px;
-            background-color: var(--primary-color);
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 6px;
+            background: var(--primary-color);
+        }
+        
+        .main-finding::after {
+            content: "🔍 KEY FINDING";
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--primary-color);
             color: white;
-            font-weight: bold;
-            font-size: 0.85rem;
-            padding: 4px 12px;
-            border-radius: 12px;
+            padding: 0.35rem 0.8rem;
+            border-bottom-left-radius: var(--radius-sm);
         }
         
         .main-finding p {
-            font-size: 1.15rem !important;
-            line-height: 1.5 !important;
+            font-size: 1.25rem !important;
+            line-height: 1.7 !important;
             font-weight: 500;
-            color: var(--primary-color);
-            margin-top: 0.5rem !important;
+            color: var(--text-color);
+            margin: 0 !important;
         }
         
         /* Metric styling */
@@ -245,70 +301,250 @@ st.markdown("""
             background-color: #f7f9fc !important;
         }
         
-        /* Navigation buttons */
+        /* Progress tracker for a SaaS-style guided experience */
+        .progress-tracker {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            position: relative;
+            padding: 0 2rem;
+        }
+        
+        .progress-tracker::before {
+            content: "";
+            position: absolute;
+            top: 14px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: var(--light-gray);
+            z-index: 1;
+        }
+        
+        .progress-tracker .progress-bar {
+            position: absolute;
+            top: 14px;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            z-index: 2;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+        
+        .progress-tracker .step {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--light-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            position: relative;
+            z-index: 3;
+            transition: all 0.3s ease;
+            color: var(--text-light);
+        }
+        
+        .progress-tracker .step.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.25);
+        }
+        
+        .progress-tracker .step.completed {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+        
+        .progress-tracker .step-label {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-light);
+            white-space: nowrap;
+            text-align: center;
+            width: 100px;
+        }
+        
+        .progress-tracker .step.active .step-label,
+        .progress-tracker .step.completed .step-label {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        
+        /* Modern navigation buttons - SaaS-style */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin: 3rem 0;
+            padding-top: 2rem;
+            border-top: 1px solid var(--light-gray);
+        }
+        
         .nav-button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 8px 20px;
-            background-color: var(--primary-color);
-            color: white;
+            padding: 0.75rem 1.5rem;
             border-radius: 50px;
             font-weight: 600;
+            font-size: 0.95rem;
             text-decoration: none;
-            margin: 8px 12px 8px 0;
-            border: none;
-            cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
         }
         
-        .nav-button:hover {
-            background-color: #2855b5;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        .nav-button.primary {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: var(--shadow-sm);
         }
         
-        .nav-button-container {
-            display: flex;
-            margin-top: 2rem;
-            margin-bottom: 3rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--light-gray);
+        .nav-button.primary:hover {
+            background-color: var(--primary-dark);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
         }
         
-        /* Key insights and recommendations styling */
-        .insight-card {
+        .nav-button.secondary {
             background-color: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 5px solid var(--secondary-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        
+        .nav-button.secondary:hover {
+            background-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+        
+        .nav-button i {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        /* Key insights and recommendations - professional cards with gradients */
+        .insight-card {
+            background: linear-gradient(to right, white, #f0f7ff);
+            border-radius: var(--radius-md);
+            padding: 1.8rem;
+            margin-bottom: 1.8rem;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--light-gray);
+            transition: var(--transition);
+        }
+        
+        .insight-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
         }
         
         .insight-card h4 {
-            color: var(--secondary-color);
-            font-size: 1.4rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--light-gray);
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+            margin-bottom: 1.2rem;
+            position: relative;
+            padding-bottom: 0.75rem;
+            font-weight: 700;
+        }
+        
+        .insight-card h4::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            border-radius: 3px;
         }
         
         .recommendation-card {
-            background-color: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 5px solid var(--accent-color);
+            background: linear-gradient(to right, white, #fff1f6);
+            border-radius: var(--radius-md);
+            padding: 1.8rem;
+            margin-bottom: 1.8rem;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--light-gray);
+            transition: var(--transition);
+        }
+        
+        .recommendation-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
         }
         
         .recommendation-card h4 {
             color: var(--accent-color);
-            font-size: 1.4rem;
+            font-size: 1.5rem;
+            margin-bottom: 1.2rem;
+            position: relative;
+            padding-bottom: 0.75rem;
+            font-weight: 700;
+        }
+        
+        .recommendation-card h4::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(to right, var(--secondary-color), var(--accent-color));
+            border-radius: 3px;
+        }
+        
+        /* Executive summary card for key insights section */
+        .executive-summary {
+            background: linear-gradient(135deg, var(--primary-dark), var(--secondary-color));
+            color: white;
+            border-radius: var(--radius-md);
+            padding: 2.5rem;
+            margin: 2.5rem 0;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .executive-summary h3 {
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            font-weight: 800;
+        }
+        
+        .executive-summary p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            line-height: 1.7;
             margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--light-gray);
+            max-width: 90%;
+        }
+        
+        .executive-summary::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 150px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.1)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='2' x2='12' y2='6'%3E%3C/line%3E%3Cline x1='12' y1='18' x2='12' y2='22'%3E%3C/line%3E%3Cline x1='4.93' y1='4.93' x2='7.76' y2='7.76'%3E%3C/line%3E%3Cline x1='16.24' y1='16.24' x2='19.07' y2='19.07'%3E%3C/line%3E%3Cline x1='2' y1='12' x2='6' y2='12'%3E%3C/line%3E%3Cline x1='18' y1='12' x2='22' y2='12'%3E%3C/line%3E%3Cline x1='4.93' y1='19.07' x2='7.76' y2='16.24'%3E%3C/line%3E%3Cline x1='16.24' y1='7.76' x2='19.07' y2='4.93'%3E%3C/line%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.6;
+            transform: rotate(30deg) scale(3);
         }
     </style>
 """, unsafe_allow_html=True)
