@@ -203,18 +203,21 @@ for i, section in enumerate(SECTIONS):
     else:
         class_name = ""
     
-    # Add icon based on status
+    # Determine text based on status
     if section_id == st.session_state.current_section:
-        icon = "🔵"
+        button_text = f"{section_name}"
+        button_type = "primary"
     elif section_id in st.session_state.completed_sections:
-        icon = "✅"
+        button_text = f"{section_name}"
+        button_type = "success"
     else:
-        icon = f"{section['number']}"
+        button_text = f"{section_name}"
+        button_type = "secondary"
     
     # Create clickable navigation item
     with wizard_cols[i]:
-        if st.button(f"{icon} {section_name}", key=f"nav_{section_id}", use_container_width=True, 
-                    help=f"Go to {section_name}"):
+        if st.button(button_text, key=f"nav_{section_id}", use_container_width=True, 
+                    help=f"Go to {section_name}", type=button_type):
             st.session_state.current_section = section_id
             st.rerun()
 
@@ -624,7 +627,7 @@ def worker_analysis(df):
     # Calculate key metrics
     total_workers = df['worker_id'].nunique()
     active_workers = df[df['claimed_at'].notna()]['worker_id'].nunique()
-    avg_views_per_worker = (len(df) / total_workers).round(1)
+    avg_views_per_worker = round(len(df) / total_workers, 1)
     
     # Workers who completed at least one shift
     completed_workers = df[df['is_verified'] == True]['worker_id'].nunique()
