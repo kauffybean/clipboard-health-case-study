@@ -1011,7 +1011,8 @@ def rate_analysis(df):
     best_complete_rate = rate_conv.loc[rate_conv['overall_conversion'].idxmax(), 'pay_rate_bin']
     best_complete_pct = rate_conv.loc[rate_conv['overall_conversion'].idxmax(), 'overall_conversion']
     
-    # We'll calculate this from the rate_conv data if needed later
+    # Calculate average claim to complete rate across all pay rates
+    claim_to_complete_rate = (rate_conv['completed'].sum() / rate_conv['claimed'].sum() * 100).round(1)
     
     # Calculate elasticity
     high_rate_conversion = df[df['pay_rate'] > 30]['claimed_at'].notna().mean() * 100
@@ -1040,13 +1041,13 @@ def rate_analysis(df):
     metrics_cols[3].metric("Median Rate", f"${median_rate:.2f}")
     
     # Additional insights about rate sensitivity
-    st.markdown(f"""
+    st.markdown("""
     ### Rate Sensitivity Insights
     
-    - **Price Elasticity:** Higher rates (>$30/hour) show {elasticity:.1f}% better conversion than lower rates
-    - **Peak Efficiency Range:** $30.00-$35.00 offers the optimal balance between cost and fill rate
-    - **Rate-to-Quality Correlation:** Higher rates correlate with higher completion rates, indicating better worker reliability
-    """)
+    - **Price Elasticity:** Higher rates (>$30/hour) show {:.1f}% better conversion than lower rates
+    - **Peak Efficiency Range:** ${:.2f}-${:.2f} offers the optimal balance between cost and fill rate
+    - **Rate-to-Quality Correlation:** Higher rates correlate with {:.1f}% higher completion rates, indicating better worker reliability
+    """.format(elasticity, 30.00, 35.00, claim_to_complete_rate))
     
     # Rate distribution
     st.markdown("### Pay Rate Distribution")
