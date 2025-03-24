@@ -98,13 +98,23 @@ st.markdown("""
     
     /* Improve metric values */
     div[data-testid="stMetricValue"] {
-        font-size: 1.75rem !important;
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        color: #2563EB !important;
+        text-align: center !important;
+    }
+    
+    /* Improve metric label */
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.9rem !important;
         font-weight: 600 !important;
+        text-align: center !important;
     }
     
     /* Improve metric delta */
     div[data-testid="stMetricDelta"] {
         font-size: 0.875rem !important;
+        text-align: center !important;
     }
     
     /* Card styles for metrics */
@@ -114,6 +124,7 @@ st.markdown("""
         padding: 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         border: 1px solid #e5e7eb;
+        text-align: center !important;
     }
     
     /* Block container */
