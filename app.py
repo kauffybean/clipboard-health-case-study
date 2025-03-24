@@ -38,29 +38,35 @@ SECTIONS = {
     "Key Insights & Recommendations": "insights"
 }
 
-# CSS to make the UI consistent and visually appealing with a modern SaaS-style design
+# Simple, minimal CSS styling
 st.markdown("""
     <style>
-        /* Define consistent color palette - Modern SaaS color scheme */
-        :root {
-            --primary-color: #4361ee;     /* Primary blue */
-            --primary-light: #e2eafc;     /* Light blue background */
-            --primary-dark: #3a0ca3;      /* Deep blue for emphasis */
-            --secondary-color: #7209b7;   /* Purple for secondary elements */
-            --accent-color: #f72585;      /* Pink for highlights/CTA */
-            --success-color: #4cc9f0;     /* Turquoise for success states */
-            --warning-color: #fcbf49;     /* Amber for warnings */
-            --danger-color: #f72585;      /* Pink for errors */
-            --background-color: #f8f9fa;  /* Light background */
-            --card-bg: #ffffff;           /* Card background */
-            --light-gray: #e9ecef;        /* Border color */
-            --text-color: #2b2d42;        /* Main text color */
-            --text-light: #8d99ae;        /* Secondary text */
-            --radius-sm: 4px;             /* Small border radius */
-            --radius-md: 8px;             /* Medium border radius */
-            --radius-lg: 16px;            /* Large border radius */
-            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);   /* Small shadow */
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);    /* Medium shadow */
+        /* Basic styling */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #333;
+        }
+
+        /* Headers */
+        h1 {
+            color: #1E3A8A;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        
+        h2 {
+            color: #1E3A8A;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        h3 {
+            color: #333;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
             --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);  /* Large shadow */
         }
         
