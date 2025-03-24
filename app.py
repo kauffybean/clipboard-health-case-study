@@ -381,54 +381,44 @@ st.markdown("""
             font-weight: 600;
         }
         
-        /* Modern navigation buttons - SaaS-style */
+        /* Simple navigation buttons */
         .nav-buttons {
             display: flex;
             justify-content: space-between;
-            margin: 3rem 0;
-            padding-top: 2rem;
-            border-top: 1px solid var(--light-gray);
+            margin: 2rem 0;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
         }
         
-        .nav-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.95rem;
+        .simple-nav-btn {
             text-decoration: none;
-            transition: all 0.2s ease;
-            cursor: pointer;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 5px;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.2s;
         }
         
-        .nav-button.primary {
-            background-color: var(--primary-color);
+        .simple-nav-btn.primary {
+            background-color: #4361ee;
             color: white;
-            box-shadow: var(--shadow-sm);
         }
         
-        .nav-button.primary:hover {
-            background-color: var(--primary-dark);
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
+        .simple-nav-btn.primary:hover {
+            background-color: #3a56d4;
+            text-decoration: none;
         }
         
-        .nav-button.secondary {
+        .simple-nav-btn.secondary {
             background-color: white;
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
+            color: #4361ee;
+            border: 1px solid #4361ee;
         }
         
-        .nav-button.secondary:hover {
-            background-color: var(--primary-light);
-            transform: translateY(-2px);
-        }
-        
-        .nav-button i {
-            margin-right: 0.5rem;
-            font-size: 1.1rem;
+        .simple-nav-btn.secondary:hover {
+            background-color: #f5f7ff;
+            text-decoration: none;
         }
         
         /* Key insights and recommendations - professional cards with gradients */
@@ -836,8 +826,8 @@ def marketplace_dynamics(df):
     completion_rate = (completed_shifts / claimed_shifts * 100).round(2) if claimed_shifts > 0 else 0
     
     # Get most popular and least popular time slots by conversion
-    popular_slot = df.groupby('slot')['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).index[0]
-    unpopular_slot = df.groupby('slot')['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values().index[0]
+    popular_slot = df.groupby('slot', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).index[0]
+    unpopular_slot = df.groupby('slot', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values().index[0]
     
     # Calculate decision time metrics
     decision_mins = df[df['claimed_at'].notna()]['claimed_at'].sub(df[df['claimed_at'].notna()]['offer_viewed_at']).dt.total_seconds().div(60).median().round()
@@ -847,8 +837,8 @@ def marketplace_dynamics(df):
     df['lead_time_bin'] = pd.cut(df['lead_time_hours'], 
                               bins=[0, 24, 48, 72, 168, float('inf')],
                               labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days'])
-    optimal_lead_time = df.groupby('lead_time_bin')['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).index[0]
-    best_lead_time_rate = df.groupby('lead_time_bin')['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).iloc[0].round(2)
+    optimal_lead_time = df.groupby('lead_time_bin', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).index[0]
+    best_lead_time_rate = df.groupby('lead_time_bin', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).iloc[0].round(2)
     
     # Add Key Takeaways at the top of the section
     st.markdown("""
@@ -1006,12 +996,12 @@ def worker_analysis(df):
     completed_workers = df[df['is_verified'] == True]['worker_id'].nunique()
     
     # Calculate worker completion rate
-    worker_completion_rate = df[df['claimed_at'].notna()].groupby('worker_id')['is_verified'].mean().mean() * 100
+    worker_completion_rate = df[df['claimed_at'].notna()].groupby('worker_id', observed=True)['is_verified'].mean().mean() * 100
     
     # Calculate most common time slot preference
-    worker_slots = df.groupby(['worker_id', 'slot']).size().reset_index()
+    worker_slots = df.groupby(['worker_id', 'slot'], observed=True).size().reset_index()
     worker_slots.columns = ['worker_id', 'slot', 'count']
-    worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id')['count'].idxmax()]
+    worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id', observed=True)['count'].idxmax()]
     most_common_slot = worker_pref_slot['slot'].value_counts().index[0]
     
     # Calculate additional metrics for the main finding
@@ -1871,30 +1861,8 @@ def main():
     curr_index = section_list.index(active_section) if active_section in section_list else 0
     progress_percentage = int((curr_index / (len(section_list) - 1)) * 100) if len(section_list) > 1 else 0
     
-    # Create the modern-looking progress tracker
-    progress_html = f"""
-    <div class="progress-tracker">
-        <div class="progress-bar" style="width: {progress_percentage}%;"></div>
-    """
-    
-    for i, (name, section) in enumerate(SECTIONS.items()):
-        if i < curr_index:
-            status = "completed"
-        elif i == curr_index:
-            status = "active"
-        else:
-            status = ""
-            
-        progress_html += f"""
-        <div class="step {status}">
-            {i+1}
-            <div class="step-label">{name}</div>
-        </div>
-        """
-    
-    progress_html += "</div>"
-    
-    st.markdown(progress_html, unsafe_allow_html=True)
+    # Skip the progress tracker for now as it's not rendering correctly
+    # We'll implement a simpler version
     
     # Show active section content
     if active_section == 'introduction':
@@ -1934,12 +1902,11 @@ def main():
             st.dataframe(df.head(5), height=200)
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Navigation button to start journey
+            # Simple button to start journey
             st.markdown("""
-            <div class="nav-buttons" style="justify-content: center;">
-                <a href="?section=data_overview" class="nav-button primary" style="font-size: 1.1rem; padding: 0.8rem 2rem;">
-                    Begin Analysis Journey
-                    <span style="margin-left: 8px;">→</span>
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="?section=data_overview" class="simple-nav-btn primary">
+                    Begin Analysis Journey →
                 </a>
             </div>
             """, unsafe_allow_html=True)
@@ -1953,10 +1920,10 @@ def main():
                 next_section = "marketplace_dynamics"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section=introduction" class="nav-button secondary">
+                    <a href="?section=introduction" class="simple-nav-btn secondary">
                         ← Back to Introduction
                     </a>
-                    <a href="?section={next_section}" class="nav-button primary">
+                    <a href="?section={next_section}" class="simple-nav-btn primary">
                         Next: Marketplace Dynamics →
                     </a>
                 </div>
@@ -1967,10 +1934,10 @@ def main():
                 next_section = "worker_analysis"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="nav-button secondary">
+                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
                         ← Previous: Data Overview
                     </a>
-                    <a href="?section={next_section}" class="nav-button primary">
+                    <a href="?section={next_section}" class="simple-nav-btn primary">
                         Next: Worker Analysis →
                     </a>
                 </div>
@@ -1981,10 +1948,10 @@ def main():
                 next_section = "workplace_analysis"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="nav-button secondary">
+                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
                         ← Previous: Marketplace Dynamics
                     </a>
-                    <a href="?section={next_section}" class="nav-button primary">
+                    <a href="?section={next_section}" class="simple-nav-btn primary">
                         Next: Workplace Analysis →
                     </a>
                 </div>
@@ -1995,10 +1962,10 @@ def main():
                 next_section = "rate_analysis"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="nav-button secondary">
+                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
                         ← Previous: Worker Analysis
                     </a>
-                    <a href="?section={next_section}" class="nav-button primary">
+                    <a href="?section={next_section}" class="simple-nav-btn primary">
                         Next: Rate & Pricing Analysis →
                     </a>
                 </div>
@@ -2009,10 +1976,10 @@ def main():
                 next_section = "time_series"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="nav-button secondary">
+                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
                         ← Previous: Workplace Analysis
                     </a>
-                    <a href="?section={next_section}" class="nav-button primary">
+                    <a href="?section={next_section}" class="simple-nav-btn primary">
                         Next: Time Series Analysis →
                     </a>
                 </div>
@@ -2023,10 +1990,10 @@ def main():
                 next_section = "insights"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="nav-button secondary">
+                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
                         ← Previous: Rate & Pricing Analysis
                     </a>
-                    <a href="?section={next_section}" class="nav-button primary">
+                    <a href="?section={next_section}" class="simple-nav-btn primary">
                         Next: Key Insights & Recommendations →
                     </a>
                 </div>
@@ -2036,10 +2003,10 @@ def main():
                 prev_section = "time_series"
                 st.markdown(f"""
                 <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="nav-button secondary">
+                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
                         ← Previous: Time Series Analysis
                     </a>
-                    <a href="?section=introduction" class="nav-button primary">
+                    <a href="?section=introduction" class="simple-nav-btn primary">
                         Return to Start
                     </a>
                 </div>
