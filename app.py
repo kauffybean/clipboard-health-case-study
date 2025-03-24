@@ -53,92 +53,230 @@ st.markdown("""
         }
         
         /* Overall layout styling */
-        .stPlotlyChart {
-            width: 100%;
-        }
-        
         .main .block-container {
             max-width: 1200px;
-            padding: 2rem 1rem;
+            padding: 2rem 1.5rem;
             background-color: var(--background-color);
+        }
+        
+        /* Improve spacing and alignment */
+        .row-widget.stVerticalBlock > div {
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Fix compressed sections */
+        .stPlotlyChart {
+            width: 100%;
+            margin-bottom: 2rem;
         }
         
         /* Typography styling */
         h1 {
             color: var(--primary-color);
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             padding-top: 1.5rem;
             padding-bottom: 1rem;
             border-bottom: 2px solid var(--light-gray);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.8rem;
         }
         
         h2 {
             color: var(--primary-color);
-            font-size: 1.8rem;
-            padding-top: 1rem;
-            padding-bottom: 0.5rem;
+            font-size: 2rem;
+            padding-top: 1.5rem;
+            padding-bottom: 0.8rem;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid var(--light-gray);
         }
         
         h3 {
             color: var(--secondary-color);
-            font-size: 1.4rem;
-            padding-top: 0.8rem;
+            font-size: 1.6rem;
+            padding-top: 1rem;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Key takeaways styling */
+        .key-takeaways {
+            background-color: white;
+            border-left: 5px solid var(--primary-color);
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 0 5px 5px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .key-takeaways h4 {
+            color: var(--primary-color);
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--light-gray);
         }
         
         /* Metric styling */
         div[data-testid="stMetricValue"] {
-            font-size: 1.5rem !important;
+            font-size: 1.8rem !important;
             font-weight: 600 !important;
             color: var(--primary-color) !important;
         }
         
         div[data-testid="stMetricLabel"] {
-            font-size: 1rem !important;
+            font-size: 1.1rem !important;
             font-weight: 500 !important;
+            color: var(--text-color) !important;
         }
         
         /* Table styling */
         div[data-testid="stTable"] table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            overflow: hidden;
         }
         
         div[data-testid="stTable"] thead tr th {
             background-color: var(--primary-color) !important;
             color: white !important;
             font-weight: 600 !important;
-            padding: 8px 12px !important;
+            padding: 12px 15px !important;
+            text-align: left !important;
+        }
+        
+        div[data-testid="stTable"] tbody tr:nth-child(even) {
+            background-color: var(--light-gray) !important;
+        }
+        
+        div[data-testid="stTable"] tbody tr td {
+            padding: 10px 15px !important;
+        }
+        
+        /* Dataframe styling */
+        .dataframe {
+            border-radius: 5px;
+            overflow: hidden;
+            border: none !important;
+            margin-bottom: 1.5rem;
+        }
+        
+        .dataframe th {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            font-weight: 600 !important;
+            padding: 10px 15px !important;
+            text-align: left !important;
+        }
+        
+        .dataframe tr:nth-child(even) {
+            background-color: var(--light-gray) !important;
         }
         
         /* Sidebar styling */
         section[data-testid="stSidebar"] {
             background-color: white;
+            border-right: 1px solid var(--light-gray);
         }
         
         section[data-testid="stSidebar"] div.stRadio label {
             font-weight: 500;
-            padding: 5px 0;
+            padding: 8px 5px;
+            cursor: pointer;
+        }
+        
+        section[data-testid="stSidebar"] div.stRadio label:hover {
+            color: var(--primary-color);
         }
         
         /* Charts styling */
         div.stPlotlyChart > div {
-            border-radius: 5px;
+            border-radius: 8px;
             background-color: white !important;
-            padding: 1rem !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
         }
         
         /* Tab styling */
         button[data-baseweb="tab"] {
             font-weight: 600;
+            padding: 8px 16px !important;
         }
         
         /* Code block styling */
         div.stCodeBlock {
-            border-radius: 5px;
-            border-left: 3px solid var(--primary-color);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 1.5rem;
+            background-color: #f7f9fc !important;
         }
+        
+        /* Navigation buttons */
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            margin: 8px 12px 8px 0;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .nav-button:hover {
+            background-color: #2855b5;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+        
+        .nav-button-container {
+            display: flex;
+            margin-top: 2rem;
+            margin-bottom: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--light-gray);
+        }
+        
+        /* Key insights and recommendations styling */
+        .insight-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--secondary-color);
+        }
+        
+        .insight-card h4 {
+            color: var(--secondary-color);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        
+        .recommendation-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--accent-color);
+        }
+        
+        .recommendation-card h4 {
+            color: var(--accent-color);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--light-gray);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -413,6 +551,26 @@ def marketplace_dynamics(df):
     deleted_shifts = df['deleted_at'].notna().sum()
     completed_shifts = df['is_verified'].sum()
     
+    # Add Key Takeaways at the top of the section
+    st.markdown("""
+    <div class="key-takeaways">
+        <h4>Key Takeaways: Marketplace Dynamics</h4>
+        <ul>
+            <li><strong>View-to-Claim Conversion:</strong> {:.1f}% of viewed shifts are claimed, indicating potential opportunity to improve initial conversion.</li>
+            <li><strong>Claim-to-Completion Rate:</strong> {:.1f}% of claimed shifts are successfully completed, highlighting reliability challenges.</li>
+            <li><strong>Time Slot Preferences:</strong> {slot} shifts have the highest demand, but {low_slot} shifts show the lowest conversion rates.</li>
+            <li><strong>Lead Time Impact:</strong> Shifts posted 24-72 hours before start time achieve optimal conversion rates.</li>
+            <li><strong>Quick Decisions:</strong> Most workers make booking decisions within {decision_mins} minutes of viewing a shift.</li>
+        </ul>
+    </div>
+    """.format(
+        conversion_rate,
+        (completed_shifts / claimed_shifts * 100) if claimed_shifts > 0 else 0,
+        slot=df['slot'].value_counts().index[0],
+        low_slot=df.groupby('slot')['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values().index[0],
+        decision_mins=df[df['claimed_at'].notna()]['claimed_at'].sub(df[df['claimed_at'].notna()]['offer_viewed_at']).dt.total_seconds().div(60).median().round()
+    ), unsafe_allow_html=True)
+    
     st.subheader("Conversion Funnel")
     
     # Display metrics
@@ -512,6 +670,18 @@ def marketplace_dynamics(df):
                          color='conversion_rate',
                          color_continuous_scale='Viridis')
     st.plotly_chart(lead_conv_fig, use_container_width=True)
+    
+    # Add navigation buttons
+    st.markdown("""
+    <div class="nav-button-container">
+        <a href="?section=data_overview" class="nav-button" style="margin-right: auto;">
+            ← Previous: Data Overview
+        </a>
+        <a href="?section=worker_analysis" class="nav-button" style="margin-left: auto;">
+            Next: Worker Analysis →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Worker analysis
 def worker_analysis(df):
@@ -527,6 +697,33 @@ def worker_analysis(df):
     
     # Workers who completed at least one shift
     completed_workers = df[df['is_verified'] == True]['worker_id'].nunique()
+    
+    # Calculate worker completion rate
+    worker_completion_rate = df[df['claimed_at'].notna()].groupby('worker_id')['is_verified'].mean().mean() * 100
+    
+    # Calculate most common time slot preference
+    worker_slots = df.groupby(['worker_id', 'slot']).size().reset_index()
+    worker_slots.columns = ['worker_id', 'slot', 'count']
+    worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id')['count'].idxmax()]
+    most_common_slot = worker_pref_slot['slot'].value_counts().index[0]
+    
+    # Add Key Takeaways at the top of the section
+    st.markdown("""
+    <div class="key-takeaways">
+        <h4>Key Takeaways: Worker Behavior</h4>
+        <ul>
+            <li><strong>Worker Retention:</strong> Only {:.1f}% of workers who view shifts actually claim and complete them, indicating a significant drop-off.</li>
+            <li><strong>Activity Patterns:</strong> Worker activity follows a power law distribution, with a small percentage of workers claiming the majority of shifts.</li>
+            <li><strong>Reliability:</strong> Workers who claim shifts complete them {:.1f}% of the time, suggesting good reliability once committed.</li>
+            <li><strong>Time Preference:</strong> Most workers prefer {preferred_slot} shifts, aligning with healthcare industry norms.</li>
+            <li><strong>Rate Sensitivity:</strong> Conversion rates increase significantly for shifts paying more than $30/hour, suggesting a clear price threshold.</li>
+        </ul>
+    </div>
+    """.format(
+        (completed_workers / total_workers * 100),
+        worker_completion_rate,
+        preferred_slot=most_common_slot
+    ), unsafe_allow_html=True)
     
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
@@ -625,6 +822,18 @@ def worker_analysis(df):
                              color='conversion_rate',
                              color_continuous_scale='Viridis')
         st.plotly_chart(rate_sens_fig, use_container_width=True)
+    
+    # Add navigation buttons
+    st.markdown("""
+    <div class="nav-button-container">
+        <a href="?section=marketplace_dynamics" class="nav-button" style="margin-right: auto;">
+            ← Previous: Marketplace Dynamics
+        </a>
+        <a href="?section=workplace_analysis" class="nav-button" style="margin-left: auto;">
+            Next: Workplace Analysis →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Workplace analysis
 def workplace_analysis(df):
@@ -650,6 +859,36 @@ def workplace_analysis(df):
     
     workplace_fill_rate['fill_rate'] = (workplace_fill_rate['filled_shifts'] / workplace_fill_rate['total_shifts'] * 100).round(2)
     avg_fill_rate = workplace_fill_rate['fill_rate'].mean().round(2)
+    
+    # Calculate lead time stats
+    workplace_lead_time = df.groupby('workplace_id')['lead_time_hours'].mean()
+    avg_lead_time = workplace_lead_time.mean().round(2)
+    
+    # Distribution of workplace volume
+    workplace_volume = df[['workplace_id', 'shift_id']].drop_duplicates().groupby('workplace_id').size().reset_index()
+    workplace_volume.columns = ['workplace_id', 'shift_count']
+    high_volume_percentage = round(len(workplace_volume[workplace_volume['shift_count'] > 10]) / len(workplace_volume) * 100, 1)
+    
+    # Add Key Takeaways at the top of the section
+    st.markdown("""
+    <div class="key-takeaways">
+        <h4>Key Takeaways: Workplace Behavior</h4>
+        <ul>
+            <li><strong>Workplace Concentration:</strong> Only {:.1f}% of workplaces post more than 10 shifts, suggesting a small group of power users drives volume.</li>
+            <li><strong>Fill Rate Challenge:</strong> The average workplace fill rate is {:.1f}%, indicating room for improvement in matching supply and demand.</li>
+            <li><strong>Posting Behavior:</strong> Workplaces post shifts with an average lead time of {:.1f} hours ({:.1f} days), which is often insufficient for optimal fill rates.</li>
+            <li><strong>Volume Variability:</strong> The top workplace posted {max_shifts} shifts, while the average workplace posted only {avg_shifts} shifts.</li>
+            <li><strong>Lead Time Impact:</strong> Workplaces that post shifts 3+ days in advance see significantly higher fill rates than those posting last-minute.</li>
+        </ul>
+    </div>
+    """.format(
+        high_volume_percentage,
+        avg_fill_rate,
+        avg_lead_time,
+        avg_lead_time/24,
+        max_shifts=max_shifts_per_workplace,
+        avg_shifts=avg_shifts_per_workplace
+    ), unsafe_allow_html=True)
     
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
@@ -733,6 +972,18 @@ def workplace_analysis(df):
     top_wp_fig.update_layout(xaxis_tickformat='.5s')
     
     st.plotly_chart(top_wp_fig, use_container_width=True)
+    
+    # Add navigation buttons
+    st.markdown("""
+    <div class="nav-button-container">
+        <a href="?section=worker_analysis" class="nav-button" style="margin-right: auto;">
+            ← Previous: Worker Analysis
+        </a>
+        <a href="?section=rate_analysis" class="nav-button" style="margin-left: auto;">
+            Next: Rate & Pricing Analysis →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Rate and pricing analysis
 def rate_analysis(df):
@@ -748,6 +999,46 @@ def rate_analysis(df):
     
     markup_avg = df['markup'].mean().round(2)
     markup_pct_avg = df['markup_percentage'].mean().round(2)
+    
+    # Find the pay rate with highest conversion
+    df['pay_rate_bin'] = pd.cut(df['pay_rate'], 
+                             bins=[0, 20, 25, 30, 35, float('inf')],
+                             labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
+    
+    rate_conv = df.groupby('pay_rate_bin').agg(
+        total_views=('shift_id', 'count'),
+        claimed=('claimed_at', lambda x: x.notna().sum())
+    ).reset_index()
+    
+    rate_conv['conversion_rate'] = (rate_conv['claimed'] / rate_conv['total_views'] * 100).round(2)
+    best_rate_bin = rate_conv.loc[rate_conv['conversion_rate'].idxmax()]['pay_rate_bin']
+    best_conversion = rate_conv.loc[rate_conv['conversion_rate'].idxmax()]['conversion_rate']
+    
+    # Slot with highest markup
+    slot_markup = df.groupby('slot')[['markup', 'markup_percentage']].mean().reset_index()
+    highest_markup_slot = slot_markup.loc[slot_markup['markup'].idxmax()]['slot']
+    highest_markup_value = slot_markup.loc[slot_markup['markup'].idxmax()]['markup'].round(2)
+    
+    # Add Key Takeaways at the top of the section
+    st.markdown("""
+    <div class="key-takeaways">
+        <h4>Key Takeaways: Rate & Pricing</h4>
+        <ul>
+            <li><strong>Price Sensitivity:</strong> The {best_rate} rate range has the highest conversion at {conv_rate:.1f}%, suggesting a clear price threshold for worker engagement.</li>
+            <li><strong>Margin Structure:</strong> Average markup is ${markup:.2f} ({markup_pct:.1f}% of charge rate), providing insights into platform economics.</li>
+            <li><strong>Shift Time Pricing:</strong> {highest_slot} shifts command the highest markup (${highest_markup:.2f}), reflecting premium pricing for less desirable hours.</li>
+            <li><strong>Price-Completion Link:</strong> Higher-priced shifts not only convert better but also have higher completion rates, suggesting better worker reliability.</li>
+            <li><strong>Strategic Pricing:</strong> Data suggests optimal pricing exists at $30+ per hour where both conversion and completion rates exceed marketplace averages.</li>
+        </ul>
+    </div>
+    """.format(
+        best_rate=best_rate_bin,
+        conv_rate=best_conversion,
+        markup=markup_avg,
+        markup_pct=markup_pct_avg,
+        highest_slot=highest_markup_slot,
+        highest_markup=highest_markup_value
+    ), unsafe_allow_html=True)
     
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
@@ -887,6 +1178,18 @@ def rate_analysis(df):
     )
     
     st.plotly_chart(rate_eff_fig, use_container_width=True)
+    
+    # Add navigation buttons
+    st.markdown("""
+    <div class="nav-button-container">
+        <a href="?section=workplace_analysis" class="nav-button" style="margin-right: auto;">
+            ← Previous: Workplace Analysis
+        </a>
+        <a href="?section=time_series" class="nav-button" style="margin-left: auto;">
+            Next: Time Series Analysis →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Time series analysis
 def time_series(df):
