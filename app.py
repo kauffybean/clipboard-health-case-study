@@ -872,21 +872,44 @@ def main():
         
         if uploaded_file is not None:
             with st.spinner("Loading and processing data..."):
-                df = load_and_clean_data(uploaded_file)
-                st.session_state['data'] = df
-                st.success("Data loaded successfully!")
-                
-                # Show preview
-                st.subheader("Data Preview")
-                st.dataframe(df.head(5))
-                
-                st.markdown("**Now you can navigate to other sections using the sidebar.**")
+                try:
+                    df = load_and_clean_data(uploaded_file)
+                    st.session_state['data'] = df
+                    st.success("Data loaded successfully!")
+                    
+                    # Show preview
+                    st.subheader("Data Preview")
+                    st.dataframe(df.head(5))
+                    
+                    st.markdown("**Now you can navigate to other sections using the sidebar.**")
+                except Exception as e:
+                    st.error(f"Error loading data: {str(e)}")
+        
+        # Option to use the attached demo dataset
+        st.markdown("---")
+        st.markdown("### Use Demo Dataset")
+        if st.button("Load Demo Dataset"):
+            with st.spinner("Loading demo dataset..."):
+                try:
+                    demo_file = "attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv"
+                    df = pd.read_csv(demo_file)
+                    df = load_and_clean_data(io.StringIO(df.to_csv(index=False)))
+                    st.session_state['data'] = df
+                    st.success("Demo data loaded successfully!")
+                    
+                    # Show preview
+                    st.subheader("Data Preview")
+                    st.dataframe(df.head(5))
+                    
+                    st.markdown("**Now you can navigate to other sections using the sidebar.**")
+                except Exception as e:
+                    st.error(f"Error loading demo data: {str(e)}")
         
         # If data exists in session and user wants to clear it
         elif 'data' in st.session_state:
             if st.button("Clear loaded data"):
                 del st.session_state['data']
-                st.experimental_rerun()
+                st.rerun()
     
     # All other sections require data
     elif 'data' in st.session_state:
@@ -914,7 +937,7 @@ def main():
         if st.button("Go to Introduction"):
             introduction_index = list(SECTIONS.keys()).index("Introduction")
             st.session_state['current_page'] = introduction_index
-            st.experimental_rerun()
+            st.rerun()
 
 if __name__ == "__main__":
     main()

@@ -21,6 +21,14 @@ def load_and_clean_data(uploaded_file):
     # Load data from CSV
     df = pd.read_csv(uploaded_file)
     
+    # Check if required columns exist
+    required_columns = ['shift_id', 'worker_id', 'workplace_id', 'shift_start_at', 
+                        'shift_created_at', 'offer_viewed_at']
+    
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Required column '{col}' is missing from the uploaded file.")
+    
     # Convert date columns to datetime
     date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 
                     'claimed_at', 'deleted_at', 'canceled_at']
