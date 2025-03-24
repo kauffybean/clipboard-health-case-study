@@ -6,7 +6,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import load_and_clean_data
 
 # Page configuration
 st.set_page_config(
@@ -27,23 +26,10 @@ st.markdown("""
         border-radius: 0 5px 5px 0;
     }
     
-    /* Navigation buttons between sections */
-    .nav-container {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 2rem;
-        padding-top: 1rem;
-        border-top: 1px solid #e5e7eb;
-    }
-    
-    .nav-button {
-        background-color: #2563EB;
-        color: white !important;
-        padding: 8px 16px;
-        border-radius: 4px;
-        text-decoration: none !important;
-        display: inline-block;
-        font-weight: 500;
+    .key-finding h4 {
+        color: #1E40AF;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
     }
     
     /* Code display */
@@ -57,6 +43,69 @@ st.markdown("""
         overflow-x: auto;
     }
     
+    /* Progress wizard */
+    .wizard-container {
+        display: flex;
+        margin: 1.5rem 0;
+        padding: 1rem 0;
+        overflow-x: auto;
+    }
+    
+    .wizard-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-right: 0.5rem;
+        min-width: 110px;
+        text-align: center;
+    }
+    
+    .wizard-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .wizard-icon.active {
+        background-color: #2563EB;
+        color: white;
+    }
+    
+    .wizard-icon.completed {
+        background-color: #10B981;
+        color: white;
+    }
+    
+    .wizard-label {
+        font-size: 12px;
+        color: #6b7280;
+    }
+    
+    .wizard-label.active {
+        color: #2563EB;
+        font-weight: 500;
+    }
+    
+    .wizard-label.completed {
+        color: #10B981;
+        font-weight: 500;
+    }
+    
+    .wizard-connector {
+        height: 2px;
+        background-color: #e5e7eb;
+        flex-grow: 1;
+        margin-top: 16px;
+    }
+    
     /* Metric improvements */
     div[data-testid="stMetricValue"] {
         font-size: 1.6rem !important;
@@ -65,38 +114,146 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Helper function to load data
+def load_and_clean_data(file_path):
+    """Load and clean the dataset"""
+    # Read the CSV file
+    df = pd.read_csv(file_path)
+    
+    # Convert all column names to lowercase
+    df.columns = [col.lower() for col in df.columns]
+    
+    # Convert date columns to datetime
+    date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 'claimed_at', 'deleted_at', 'canceled_at']
+    for col in date_columns:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col])
+    
+    # Calculate lead time in hours
+    if 'shift_start_at' in df.columns and 'shift_created_at' in df.columns:
+        df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
+    
+    # Convert boolean columns
+    bool_columns = ['is_ncns', 'is_verified']
+    for col in bool_columns:
+        if col in df.columns:
+            df[col] = df[col].astype(bool)
+    
+    # Rename some columns for clarity
+    column_mapping = {
+        'shift_start_at': 'shift_date',
+        'shift_created_at': 'created_at',
+        'offer_viewed_at': 'viewed_at'
+    }
+    
+    df = df.rename(columns=column_mapping)
+    
+    return df
+
 # Load the dataset
 df = load_and_clean_data("attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv")
 
-# Define sections
-SECTIONS = {
-    "Introduction": "introduction",
-    "Data Overview": "data_overview",
-    "Marketplace Dynamics": "marketplace_dynamics", 
-    "Worker Analysis": "worker_analysis",
-    "Workplace Analysis": "workplace_analysis",
-    "Rate Analysis": "rate_analysis",
-    "Time Series": "time_series",
-    "Key Insights": "insights"
-}
+# Define sections for the wizard
+SECTIONS = [
+    {"id": "introduction", "name": "Introduction", "number": 1},
+    {"id": "data_overview", "name": "Data Overview", "number": 2},
+    {"id": "marketplace_dynamics", "name": "Marketplace Dynamics", "number": 3},
+    {"id": "worker_analysis", "name": "Worker Analysis", "number": 4},
+    {"id": "workplace_analysis", "name": "Workplace Analysis", "number": 5},
+    {"id": "rate_analysis", "name": "Rate Analysis", "number": 6},
+    {"id": "time_series", "name": "Time Series", "number": 7},
+    {"id": "insights", "name": "Key Insights", "number": 8}
+]
 
-# Sidebar navigation
+# Initialize session state for tracking progress
+if 'current_section' not in st.session_state:
+    st.session_state.current_section = "introduction"
+
+if 'completed_sections' not in st.session_state:
+    st.session_state.completed_sections = []
+
+# Function to display the wizard navigation
+def display_wizard_navigation():
+    html = '<div class="wizard-container">'
+    
+    for i, section in enumerate(SECTIONS):
+        # Determine the state of this step
+        if section["id"] == st.session_state.current_section:
+            icon_class = "active"
+            label_class = "active"
+        elif section["id"] in st.session_state.completed_sections:
+            icon_class = "completed"
+            label_class = "completed"
+        else:
+            icon_class = ""
+            label_class = ""
+        
+        # Create the HTML for this step
+        html += f'''
+        <div class="wizard-step" onclick="window.location.href='?section={section["id"]}'">
+            <div class="wizard-icon {icon_class}">{section["number"]}</div>
+            <div class="wizard-label {label_class}">{section["name"]}</div>
+        </div>
+        '''
+        
+        # Add connector if not the last item
+        if i < len(SECTIONS) - 1:
+            html += '<div class="wizard-connector"></div>'
+    
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
+
+# Sidebar navigation that shows the wizard status
 st.sidebar.title("Navigation")
-selected_section = st.sidebar.radio("Go to", list(SECTIONS.keys()))
+for section in SECTIONS:
+    # Create an icon based on status
+    if section["id"] == st.session_state.current_section:
+        icon = "▶️"
+    elif section["id"] in st.session_state.completed_sections:
+        icon = "✅"
+    else:
+        icon = "⭕"
+    
+    # Create a clickable link
+    if st.sidebar.button(f"{icon} {section['name']}", key=section["id"]):
+        st.session_state.current_section = section["id"]
+        st.query_params["section"] = section["id"]
+        st.rerun()
 
-# Alternatively get section from URL query param if it exists
+# Check for section param in URL
 query_params = st.query_params
 if "section" in query_params:
-    section_value = query_params["section"]
-    # Find the key for this section value
-    for key, value in SECTIONS.items():
-        if value == section_value:
-            selected_section = key
-            break
+    section_id = query_params["section"]
+    # Check if it's a valid section
+    if any(section["id"] == section_id for section in SECTIONS):
+        st.session_state.current_section = section_id
 
-# Set active section in URL
-section_value = SECTIONS[selected_section]
-st.query_params["section"] = section_value
+# Set current section in URL
+st.query_params["section"] = st.session_state.current_section
+
+# Helper function to navigate to next section
+def go_to_next_section():
+    current_index = next((i for i, s in enumerate(SECTIONS) if s["id"] == st.session_state.current_section), 0)
+    
+    # Add current section to completed list if not already there
+    if st.session_state.current_section not in st.session_state.completed_sections:
+        st.session_state.completed_sections.append(st.session_state.current_section)
+    
+    # Move to next section if not at the end
+    if current_index < len(SECTIONS) - 1:
+        st.session_state.current_section = SECTIONS[current_index + 1]["id"]
+        st.query_params["section"] = st.session_state.current_section
+        st.rerun()
+
+# Helper function to navigate to previous section
+def go_to_previous_section():
+    current_index = next((i for i, s in enumerate(SECTIONS) if s["id"] == st.session_state.current_section), 0)
+    
+    # Move to previous section if not at the beginning
+    if current_index > 0:
+        st.session_state.current_section = SECTIONS[current_index - 1]["id"]
+        st.query_params["section"] = st.session_state.current_section
+        st.rerun()
 
 # Introduction
 def introduction():
@@ -139,18 +296,17 @@ def introduction():
         - Completion status
         """)
     
-    st.subheader("Navigation")
-    st.markdown("Use the sidebar to navigate through different sections of the analysis.")
-    
-    # Navigation buttons
+    st.subheader("How to Navigate")
     st.markdown("""
-    <div class="nav-container">
-        <div></div>
-        <a href="?section=data_overview" class="nav-button">
-            Next: Data Overview →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    This case study is organized into sequential sections that build upon each other. 
+    Use the progress tracker at the top to navigate between sections, or click 'Continue'
+    to move to the next section.
+    """)
+    
+    # Continue button
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col3:
+        st.button("Continue to Data Overview →", on_click=go_to_next_section, type="primary")
 
 # Data Overview
 def data_overview(df):
@@ -220,20 +376,28 @@ def data_overview(df):
     <div class="code-box">
     ```python
     def load_and_clean_data(file_path):
-        # Load the data
+        # Read the CSV file
         df = pd.read_csv(file_path)
         
+        # Convert all column names to lowercase
+        df.columns = [col.lower() for col in df.columns]
+        
         # Convert date columns to datetime
-        date_columns = ['created_at', 'shift_date', 'viewed_at', 'claimed_at', 'canceled_at']
+        date_columns = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 
+                        'claimed_at', 'deleted_at', 'canceled_at']
         for col in date_columns:
-            df[col] = pd.to_datetime(df[col])
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col])
         
         # Calculate lead time in hours
-        df['lead_time_hours'] = (df['shift_date'] - df['created_at']).dt.total_seconds() / 3600
+        df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
         
-        # Convert boolean columns
-        df['is_ncns'] = df['is_ncns'].astype(bool)
-        df['is_verified'] = df['is_verified'].astype(bool)
+        # Rename columns for clarity
+        df = df.rename(columns={
+            'shift_start_at': 'shift_date',
+            'shift_created_at': 'created_at',
+            'offer_viewed_at': 'viewed_at'
+        })
         
         return df
     ```
@@ -241,16 +405,11 @@ def data_overview(df):
     """, unsafe_allow_html=True)
     
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=introduction" class="nav-button">
-            ← Previous: Introduction
-        </a>
-        <a href="?section=marketplace_dynamics" class="nav-button">
-            Next: Marketplace Dynamics →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Introduction", on_click=go_to_previous_section)
+    with col3:
+        st.button("Continue to Marketplace Dynamics →", on_click=go_to_next_section, type="primary")
 
 # Marketplace Dynamics
 def marketplace_dynamics(df):
@@ -348,52 +507,7 @@ def marketplace_dynamics(df):
         )
         st.plotly_chart(slot_conversion_fig, use_container_width=True)
     
-    # Day of week distribution
-    st.subheader("Day of Week Analysis")
-    
-    # Add day of week
-    df['day_of_week'] = df['shift_date'].dt.day_name()
-    # Sort by day of week order
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    
-    # Get day of week counts
-    day_counts = df.groupby('day_of_week')['shift_id'].nunique().reindex(day_order).reset_index()
-    day_counts.columns = ['Day of Week', 'Number of Shifts']
-    
-    # Day of week conversion rates
-    day_conversion = df.groupby('day_of_week').agg(
-        views=('shift_id', 'count'),
-        claims=('claimed_at', lambda x: x.notna().sum())
-    ).reset_index()
-    day_conversion['Conversion Rate'] = (day_conversion['claims'] / day_conversion['views'] * 100).round(1)
-    day_conversion = day_conversion.sort_values(by='Conversion Rate', ascending=False)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        day_fig = px.bar(
-            day_counts, 
-            x='Day of Week', 
-            y='Number of Shifts',
-            title='Distribution of Shifts by Day of Week',
-            color='Number of Shifts',
-            color_continuous_scale='Blues'
-        )
-        st.plotly_chart(day_fig, use_container_width=True)
-    
-    with col2:
-        day_conv_fig = px.bar(
-            day_conversion, 
-            x='day_of_week', 
-            y='Conversion Rate',
-            title='Conversion Rates by Day of Week',
-            color='Conversion Rate',
-            color_continuous_scale='Viridis',
-            labels={'day_of_week': 'Day of Week'}
-        )
-        st.plotly_chart(day_conv_fig, use_container_width=True)
-    
-    # Display code example
+    # Code example
     st.subheader("Analysis Code")
     st.markdown("""
     <div class="code-box">
@@ -413,16 +527,11 @@ def marketplace_dynamics(df):
     """, unsafe_allow_html=True)
     
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=data_overview" class="nav-button">
-            ← Previous: Data Overview
-        </a>
-        <a href="?section=worker_analysis" class="nav-button">
-            Next: Worker Analysis →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Data Overview", on_click=go_to_previous_section)
+    with col3:
+        st.button("Continue to Worker Analysis →", on_click=go_to_next_section, type="primary")
 
 # Worker Analysis
 def worker_analysis(df):
@@ -436,13 +545,13 @@ def worker_analysis(df):
     # Workers who completed at least one shift
     completed_workers = df[df['is_verified'] == True]['worker_id'].nunique()
     
-    # Calculate worker completion rate (with observed=True parameter)
-    worker_completion_rate = df[df['claimed_at'].notna()].groupby('worker_id', observed=True)['is_verified'].mean().mean() * 100
+    # Calculate worker completion rate (with observed=True parameter for categorical data)
+    worker_completion_rate = df[df['claimed_at'].notna()].groupby('worker_id')['is_verified'].mean().mean() * 100
     
     # Calculate most common time slot preference
-    worker_slots = df.groupby(['worker_id', 'slot'], observed=True).size().reset_index()
+    worker_slots = df.groupby(['worker_id', 'slot']).size().reset_index()
     worker_slots.columns = ['worker_id', 'slot', 'count']
-    worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id', observed=True)['count'].idxmax()]
+    worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id')['count'].idxmax()]
     most_common_slot = worker_pref_slot['slot'].value_counts().index[0]
     
     # Claims per worker
@@ -527,53 +636,7 @@ def worker_analysis(df):
         )
         st.plotly_chart(completion_fig, use_container_width=True)
     
-    # Worker preference analysis
-    st.subheader("Worker Preferences")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Time slot preferences
-        slot_pref_dist = worker_pref_slot['slot'].value_counts().reset_index()
-        slot_pref_dist.columns = ['Time Slot', 'Number of Workers']
-        
-        slot_pref_fig = px.pie(
-            slot_pref_dist, 
-            names='Time Slot', 
-            values='Number of Workers',
-            title='Worker Preferred Time Slots',
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-        st.plotly_chart(slot_pref_fig, use_container_width=True)
-    
-    with col2:
-        # Rate sensitivity
-        # Group by worker and pay rate bins
-        df['pay_rate_bin'] = pd.cut(
-            df['pay_rate'], 
-            bins=[0, 20, 25, 30, 35, float('inf')],
-            labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35']
-        )
-        
-        rate_conv = df.groupby('pay_rate_bin').agg(
-            total_views=('shift_id', 'count'),
-            claimed=('claimed_at', lambda x: x.notna().sum())
-        ).reset_index()
-        
-        rate_conv['conversion_rate'] = (rate_conv['claimed'] / rate_conv['total_views'] * 100).round(2)
-        
-        rate_sens_fig = px.bar(
-            rate_conv, 
-            x='pay_rate_bin', 
-            y='conversion_rate',
-            title='Conversion Rate by Pay Rate',
-            labels={'pay_rate_bin': 'Pay Rate Range', 'conversion_rate': 'Conversion Rate (%)'},
-            color='conversion_rate',
-            color_continuous_scale='Viridis'
-        )
-        st.plotly_chart(rate_sens_fig, use_container_width=True)
-    
-    # Display code example
+    # Code example
     st.subheader("Analysis Code")
     st.markdown("""
     <div class="code-box">
@@ -592,16 +655,11 @@ def worker_analysis(df):
     """, unsafe_allow_html=True)
     
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=marketplace_dynamics" class="nav-button">
-            ← Previous: Marketplace Dynamics
-        </a>
-        <a href="?section=workplace_analysis" class="nav-button">
-            Next: Workplace Analysis →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Marketplace Dynamics", on_click=go_to_previous_section)
+    with col3:
+        st.button("Continue to Workplace Analysis →", on_click=go_to_next_section, type="primary")
 
 # Workplace Analysis
 def workplace_analysis(df):
@@ -681,47 +739,6 @@ def workplace_analysis(df):
     with metrics_cols[3]:
         st.metric("Avg Fill Rate", f"{avg_fill_rate}%")
     
-    # Workplace distribution by volume
-    st.subheader("Workplace Distribution by Shift Volume")
-    
-    # Create volume bins
-    workplace_volume = df[['workplace_id', 'shift_id']].drop_duplicates().groupby('workplace_id').size().reset_index()
-    workplace_volume.columns = ['workplace_id', 'shift_count']
-    
-    workplace_volume['volume_level'] = pd.cut(
-        workplace_volume['shift_count'],
-        bins=[0, 1, 5, 10, 20, 50, float('inf')],
-        labels=['1 shift', '2-5 shifts', '6-10 shifts', '11-20 shifts', '21-50 shifts', '>50 shifts']
-    )
-    
-    volume_dist = workplace_volume['volume_level'].value_counts().reset_index()
-    volume_dist.columns = ['Volume Level', 'Number of Workplaces']
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        volume_fig = px.bar(
-            volume_dist, 
-            x='Volume Level', 
-            y='Number of Workplaces',
-            title='Workplace Distribution by Shift Volume',
-            color='Number of Workplaces',
-            color_continuous_scale='Blues'
-        )
-        st.plotly_chart(volume_fig, use_container_width=True)
-    
-    with col2:
-        # Fill rate distribution
-        fill_rate_fig = px.histogram(
-            workplace_fill_rate, 
-            x='fill_rate', 
-            nbins=20,
-            title='Distribution of Workplace Fill Rates',
-            labels={'fill_rate': 'Fill Rate (%)'},
-            color_discrete_sequence=['#3366CC']
-        )
-        st.plotly_chart(fill_rate_fig, use_container_width=True)
-    
     # Lead time analysis
     st.subheader("Effect of Lead Time on Fill Rates")
     
@@ -746,7 +763,33 @@ def workplace_analysis(df):
     )
     st.plotly_chart(lead_time_fig, use_container_width=True)
     
-    # Display code example
+    # Workplace distribution by volume
+    st.subheader("Workplace Distribution by Shift Volume")
+    
+    # Create volume bins
+    workplace_volume = df[['workplace_id', 'shift_id']].drop_duplicates().groupby('workplace_id').size().reset_index()
+    workplace_volume.columns = ['workplace_id', 'shift_count']
+    
+    workplace_volume['volume_level'] = pd.cut(
+        workplace_volume['shift_count'],
+        bins=[0, 1, 5, 10, 20, 50, float('inf')],
+        labels=['1 shift', '2-5 shifts', '6-10 shifts', '11-20 shifts', '21-50 shifts', '>50 shifts']
+    )
+    
+    volume_dist = workplace_volume['volume_level'].value_counts().reset_index()
+    volume_dist.columns = ['Volume Level', 'Number of Workplaces']
+    
+    volume_fig = px.bar(
+        volume_dist, 
+        x='Volume Level', 
+        y='Number of Workplaces',
+        title='Workplace Distribution by Shift Volume',
+        color='Number of Workplaces',
+        color_continuous_scale='Blues'
+    )
+    st.plotly_chart(volume_fig, use_container_width=True)
+    
+    # Code example
     st.subheader("Analysis Code")
     st.markdown("""
     <div class="code-box">
@@ -772,16 +815,11 @@ def workplace_analysis(df):
     """, unsafe_allow_html=True)
     
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=worker_analysis" class="nav-button">
-            ← Previous: Worker Analysis
-        </a>
-        <a href="?section=rate_analysis" class="nav-button">
-            Next: Rate Analysis →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Worker Analysis", on_click=go_to_previous_section)
+    with col3:
+        st.button("Continue to Rate Analysis →", on_click=go_to_next_section, type="primary")
 
 # Rate Analysis
 def rate_analysis(df):
@@ -887,32 +925,7 @@ def rate_analysis(df):
         )
         st.plotly_chart(overall_conv_fig, use_container_width=True)
     
-    # Rate vs Lead Time Analysis
-    st.subheader("Rate vs. Lead Time Analysis")
-    
-    # Calculate average pay rate by lead time bin
-    df_rate_lead = df.copy()
-    df_rate_lead['lead_time_bin'] = pd.cut(
-        df_rate_lead['lead_time_hours'], 
-        bins=[0, 24, 48, 72, 168, float('inf')],
-        labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days']
-    )
-    
-    rate_by_lead = df_rate_lead.groupby('lead_time_bin')['pay_rate'].mean().reset_index()
-    rate_by_lead['pay_rate'] = rate_by_lead['pay_rate'].round(2)
-    
-    rate_lead_fig = px.bar(
-        rate_by_lead,
-        x='lead_time_bin',
-        y='pay_rate',
-        title='Average Pay Rate by Lead Time',
-        labels={'lead_time_bin': 'Lead Time', 'pay_rate': 'Average Pay Rate ($)'},
-        color='pay_rate',
-        color_continuous_scale='Viridis'
-    )
-    st.plotly_chart(rate_lead_fig, use_container_width=True)
-    
-    # Display code example
+    # Code example
     st.subheader("Analysis Code")
     st.markdown("""
     <div class="code-box">
@@ -937,16 +950,11 @@ def rate_analysis(df):
     """, unsafe_allow_html=True)
     
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=workplace_analysis" class="nav-button">
-            ← Previous: Workplace Analysis
-        </a>
-        <a href="?section=time_series" class="nav-button">
-            Next: Time Series Analysis →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Workplace Analysis", on_click=go_to_previous_section)
+    with col3:
+        st.button("Continue to Time Series Analysis →", on_click=go_to_next_section, type="primary")
 
 # Time Series Analysis
 def time_series(df):
@@ -1034,37 +1042,7 @@ def time_series(df):
     
     st.plotly_chart(rates_fig, use_container_width=True)
     
-    # Weekly patterns
-    st.subheader("Weekly Patterns")
-    
-    # Add day of week
-    df['day_of_week'] = df['created_at'].dt.day_name()
-    
-    # Group by day of week
-    day_metrics = df.groupby('day_of_week').agg(
-        views=('shift_id', 'count'),
-        claims=('claimed_at', lambda x: x.notna().sum())
-    ).reset_index()
-    
-    day_metrics['claim_rate'] = (day_metrics['claims'] / day_metrics['views'] * 100).round(1)
-    
-    # Sort by day order
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    day_metrics['day_order'] = day_metrics['day_of_week'].apply(lambda x: day_order.index(x))
-    day_metrics = day_metrics.sort_values('day_order')
-    
-    day_fig = px.bar(
-        day_metrics,
-        x='day_of_week',
-        y='claim_rate',
-        title='Claim Rate by Day of Week',
-        labels={'day_of_week': 'Day of Week', 'claim_rate': 'Claim Rate (%)'},
-        color='claim_rate',
-        color_continuous_scale='Blues'
-    )
-    st.plotly_chart(day_fig, use_container_width=True)
-    
-    # Display code example
+    # Code example
     st.subheader("Analysis Code")
     st.markdown("""
     <div class="code-box">
@@ -1086,16 +1064,11 @@ def time_series(df):
     """, unsafe_allow_html=True)
     
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=rate_analysis" class="nav-button">
-            ← Previous: Rate Analysis
-        </a>
-        <a href="?section=insights" class="nav-button">
-            Next: Key Insights →
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Rate Analysis", on_click=go_to_previous_section)
+    with col3:
+        st.button("Continue to Key Insights →", on_click=go_to_next_section, type="primary")
 
 # Key Insights and Recommendations
 def insights():
@@ -1170,62 +1143,42 @@ def insights():
     - Create a "shifts you might like" feature for workers based on their historical preferences
     - Implement automatic reminders for workplaces to post shifts with optimal lead time
     - Highlight shifts at risk of going unfilled for targeted outreach
-    
-    ### 3. Product Development Roadmap
-    
-    - Build advanced analytics and prediction models for fill rates based on key variables
-    - Develop worker-focused scheduling tools to better align shift opportunities with preferences
-    - Create workplace planning tools to optimize posting strategies
-    - Implement dynamic pricing to respond to marketplace conditions in real-time
     """)
     
-    # Display code example
-    st.subheader("Python Libraries Used in This Analysis")
-    st.markdown("""
-    <div class="code-box">
-    ```python
-    import streamlit as st
-    import pandas as pd
-    import numpy as np
-    import plotly.express as px
-    import plotly.graph_objects as go
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    from datetime import datetime
-    ```
-    </div>
-    """, unsafe_allow_html=True)
-    
     # Navigation buttons
-    st.markdown("""
-    <div class="nav-container">
-        <a href="?section=time_series" class="nav-button">
-            ← Previous: Time Series Analysis
-        </a>
-        <a href="?section=introduction" class="nav-button">
-            Back to Start
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.button("← Back to Time Series Analysis", on_click=go_to_previous_section)
+    with col3:
+        st.button("Restart Case Study", on_click=lambda: go_to_section("introduction"), type="primary")
+
+# Helper function to navigate to a specific section
+def go_to_section(section_id):
+    st.session_state.current_section = section_id
+    st.query_params["section"] = section_id
+    st.rerun()
 
 # Main function to control the app flow
 def main():
+    # Display the wizard navigation
+    display_wizard_navigation()
+    
     # Section routing based on selected section
-    if selected_section == "Introduction":
+    if st.session_state.current_section == "introduction":
         introduction()
-    elif selected_section == "Data Overview":
+    elif st.session_state.current_section == "data_overview":
         data_overview(df)
-    elif selected_section == "Marketplace Dynamics":
+    elif st.session_state.current_section == "marketplace_dynamics":
         marketplace_dynamics(df)
-    elif selected_section == "Worker Analysis":
+    elif st.session_state.current_section == "worker_analysis":
         worker_analysis(df)
-    elif selected_section == "Workplace Analysis":
+    elif st.session_state.current_section == "workplace_analysis":
         workplace_analysis(df)
-    elif selected_section == "Rate Analysis":
+    elif st.session_state.current_section == "rate_analysis":
         rate_analysis(df)
-    elif selected_section == "Time Series":
+    elif st.session_state.current_section == "time_series":
         time_series(df)
-    elif selected_section == "Key Insights":
+    elif st.session_state.current_section == "insights":
         insights()
 
 if __name__ == "__main__":
