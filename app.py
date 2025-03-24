@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import seaborn as sns
+import gc  # For garbage collection
 
 # Page configuration settings
 st.set_page_config(

@@ -5,7 +5,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.enableCORS=true --server.enableXsrfProtection=false"]
+run = ["sh", "-c", "streamlit run deploy.py --server.port 5000 --server.address 0.0.0.0 --server.enableCORS=true --server.enableXsrfProtection=false"]
 
 [workflows]
 runButton = "Project"
@@ -40,7 +40,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.enableCORS=true --server.enableXsrfProtection=false"
+args = "streamlit run deploy.py --server.port 5000 --server.address 0.0.0.0 --server.enableCORS=true --server.enableXsrfProtection=false"
 waitForPort = 5000
 
 [[ports]]
