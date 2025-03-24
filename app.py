@@ -56,25 +56,44 @@ st.markdown("""
 def introduction():
     st.title("CBH Marketplace Data Analysis")
     st.markdown("""
-    ## Welcome to the CBH Marketplace Analyzer
+    ## Interactive Case Study: Uncovering Market Patterns and Opportunities
     
-    This application will guide you through a comprehensive analysis of the CBH marketplace data, 
-    exploring the dynamics between workers and workplaces.
+    Welcome to this interactive analysis of Clipboard Health (CBH) - a two-sided healthcare staffing marketplace
+    with strong network effects where healthcare workers transact with workplaces to book per diem shifts.
     
-    **About CBH Marketplace**:
-    CBH is a two-sided marketplace with strong network effects where workers transact with workplaces to book per diem shifts.
+    **The Business Context**:
     
-    **Analysis Flow**:
-    1. Upload your marketplace data
-    2. Explore summary statistics
-    3. Analyze marketplace dynamics
-    4. Investigate worker behaviors
-    5. Understand workplace patterns
-    6. Examine rate and pricing strategies
-    7. Review time-series trends
-    8. Generate insights and recommendations
+    CBH operates as a marketplace platform connecting healthcare facilities with qualified healthcare workers 
+    for on-demand staffing needs. Workplaces post shifts they need to fill, and workers browse and claim shifts 
+    they want to work. The platform needs to balance the needs of both sides to create a healthy marketplace.
     
-    Let's get started by uploading your data!
+    **Key Business Questions**:
+    
+    1. How effective is the marketplace at converting shift views to bookings?
+    2. What patterns exist in worker and workplace behaviors?
+    3. How does timing (posting time, lead time) affect marketplace success?
+    4. What role does pricing play in marketplace dynamics?
+    5. What recommendations can improve marketplace performance?
+    
+    **Data Background**:
+    
+    The dataset contains detailed records of shift offers viewed by workers, including whether they claimed
+    the shift, if they completed it, pricing information, and timing details. Each record represents a worker
+    viewing a shift, with the potential outcomes including claiming, canceling, or ignoring the shift.
+    
+    **Case Study Navigation**:
+    
+    This interactive case study is organized into sections that build on each other:
+    
+    1. **Data Overview**: Understand the dataset structure and quality
+    2. **Marketplace Dynamics**: Analyze conversion rates and activity patterns
+    3. **Worker Analysis**: Explore worker behaviors and preferences
+    4. **Workplace Analysis**: Examine workplace posting patterns
+    5. **Rate & Pricing Analysis**: Investigate price sensitivity and margins
+    6. **Time Series Analysis**: Study temporal patterns in marketplace activity
+    7. **Key Insights & Recommendations**: Discover actionable findings
+    
+    Use the navigation sidebar to explore each section of the analysis.
     """)
 
 # Data overview section
@@ -83,20 +102,27 @@ def data_overview(df):
     
     # Data summary
     st.subheader("Dataset Summary")
-    st.write(f"📊 Total Records: {len(df):,}")
-    st.write(f"🕒 Date Range: {df['shift_start_at'].min().date()} to {df['shift_start_at'].max().date()}")
-    st.write(f"👤 Unique Workers: {df['worker_id'].nunique():,}")
-    st.write(f"🏢 Unique Workplaces: {df['workplace_id'].nunique():,}")
-    st.write(f"💼 Unique Shifts: {df['shift_id'].nunique():,}")
     
-    col1, col2 = st.columns(2)
-    
+    # Summary metrics
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.subheader("Data Sample")
+        st.metric("Total Records", f"{len(df):,}")
+        st.metric("Unique Workers", f"{df['worker_id'].nunique():,}")
+    with col2:
+        st.metric("Unique Workplaces", f"{df['workplace_id'].nunique():,}")
+        st.metric("Unique Shifts", f"{df['shift_id'].nunique():,}")
+    with col3:
+        st.metric("Date Range", f"{df['shift_start_at'].min().date()} to {df['shift_start_at'].max().date()}")
+        st.metric("Avg Hourly Pay Rate", f"${df['pay_rate'].mean():.2f}")
+    
+    # Dataframe and glossary
+    st.subheader("Dataset Structure")
+    tab1, tab2, tab3 = st.tabs(["Data Sample", "Data Glossary", "Code Example"])
+    
+    with tab1:
         st.dataframe(df.head(10), height=300)
     
-    with col2:
-        st.subheader("Data Glossary")
+    with tab2:
         glossary_data = {
             'Column': [
                 'shift_id', 'worker_id', 'workplace_id', 'shift_start_at', 
@@ -115,45 +141,174 @@ def data_overview(df):
                 'Timeslot of shift (NOC = overnight)',
                 'Time shift was booked by worker (UTC)',
                 'Time shift was deleted by workplace (UTC)',
-                'Worker worked shift',
+                'Worker completed the shift (boolean)',
                 'Time shift was canceled by worker (UTC)',
-                'Worker was a no call no show',
-                'Hourly rate offered to worker for the shift',
-                'Hourly charge per labor hour at a facility'
+                'Worker was a no-call-no-show (boolean)',
+                'Hourly rate offered to worker for the shift ($)',
+                'Hourly rate charged to workplace for the shift ($)'
             ]
         }
         glossary_df = pd.DataFrame(glossary_data)
         st.dataframe(glossary_df, height=300)
     
-    # Data quality summary
-    st.subheader("Data Quality Summary")
+    with tab3:
+        st.code("""
+# Python code for loading and previewing the dataset
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the data
+df = pd.read_csv('cbh_marketplace_data.csv')
+
+# Convert datetime columns
+datetime_cols = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 
+                'claimed_at', 'deleted_at', 'canceled_at']
+for col in datetime_cols:
+    df[col] = pd.to_datetime(df[col])
+
+# Display basic info
+print(f"Dataset shape: {df.shape}")
+print(f"Unique workers: {df['worker_id'].nunique()}")
+print(f"Unique workplaces: {df['workplace_id'].nunique()}")
+print(f"Date range: {df['shift_start_at'].min().date()} to {df['shift_start_at'].max().date()}")
+
+# Preview the data
+df.head()
+        """)
     
-    # Missing values
-    missing_data = df.isnull().sum().to_frame().reset_index()
-    missing_data.columns = ['Column', 'Missing Values']
-    missing_data['Missing Percentage'] = (missing_data['Missing Values'] / len(df) * 100).round(2)
+    # Data quality assessment
+    st.subheader("Data Quality Assessment")
     
-    col1, col2 = st.columns(2)
+    # Create tabs for different quality aspects
+    tab1, tab2, tab3 = st.tabs(["Missing Values", "Data Distributions", "Data Types"])
     
-    with col1:
-        st.write("Missing Values")
-        st.dataframe(missing_data, height=300)
+    with tab1:
+        # Missing values visualization
+        missing_data = df.isnull().sum().to_frame().reset_index()
+        missing_data.columns = ['Column', 'Missing Values']
+        missing_data['Missing Percentage'] = (missing_data['Missing Values'] / len(df) * 100).round(2)
+        missing_data = missing_data.sort_values('Missing Percentage', ascending=False)
+        
+        # Only show columns with missing values
+        missing_data_with_nulls = missing_data[missing_data['Missing Values'] > 0]
+        
+        if len(missing_data_with_nulls) > 0:
+            fig = px.bar(missing_data_with_nulls, 
+                      x='Column', 
+                      y='Missing Percentage',
+                      title='Percentage of Missing Values by Column',
+                      color='Missing Percentage',
+                      color_continuous_scale='Reds')
+            fig.update_layout(xaxis_title='Column', yaxis_title='Missing Percentage (%)')
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.write("**Missing Values Analysis:**")
+            st.write("""
+            The missing values in this dataset are actually informative. For example:
+            - Missing `claimed_at` indicates the worker didn't claim the shift
+            - Missing `canceled_at` means the worker didn't cancel the shift
+            - Missing `deleted_at` means the workplace didn't delete the shift
+            
+            These nulls represent the status of the shift in the marketplace journey and are expected.
+            """)
+        else:
+            st.info("No missing values found in the dataset.")
     
-    with col2:
-        # Data types
-        st.write("Data Types")
+    with tab2:
+        # Showing distributions of key variables
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Pay rate distribution
+            fig = px.histogram(df, x='pay_rate', nbins=30,
+                            title='Distribution of Pay Rates',
+                            labels={'pay_rate': 'Hourly Pay Rate ($)'},
+                            color_discrete_sequence=['#3366CC'])
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Duration distribution
+            fig = px.histogram(df, x='duration', nbins=20,
+                            title='Distribution of Shift Durations',
+                            labels={'duration': 'Shift Duration (hours)'},
+                            color_discrete_sequence=['#DC3912'])
+            st.plotly_chart(fig, use_container_width=True)
+            
+        # Slot distribution
+        slot_counts = df['slot'].value_counts().reset_index()
+        slot_counts.columns = ['Slot', 'Count']
+        
+        fig = px.bar(slot_counts, x='Slot', y='Count',
+                   title='Distribution of Shifts by Time Slot',
+                   color='Count',
+                   color_continuous_scale='Viridis')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with tab3:
+        # Data types and examples
         dtypes_df = pd.DataFrame({
             'Column': df.dtypes.index,
             'Type': df.dtypes.values
         })
+        
+        st.write("**Column Data Types:**")
         st.dataframe(dtypes_df, height=300)
+        
+        st.write("**Python Code for Data Type Conversion:**")
+        st.code("""
+# Convert data types for analysis
+# Datetime conversions
+datetime_cols = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 
+                'claimed_at', 'deleted_at', 'canceled_at']
+for col in datetime_cols:
+    df[col] = pd.to_datetime(df[col])
+
+# Boolean conversions
+df['is_verified'] = df['is_verified'].astype(bool)
+df['is_ncns'] = df['is_ncns'].astype(bool)
+
+# Calculate derived fields
+df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
+df['decision_time_minutes'] = df.apply(
+    lambda x: (x['claimed_at'] - x['offer_viewed_at']).total_seconds() / 60 
+    if pd.notna(x['claimed_at']) else None, axis=1
+)
+        """)
     
-    # Summary statistics
-    st.subheader("Summary Statistics for Numerical Columns")
+    # Summary statistics with context
+    st.subheader("Summary Statistics with Insights")
     
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    # Calculate summary stats and display
+    numeric_cols = ['pay_rate', 'charge_rate', 'duration']
     stats_df = df[numeric_cols].describe().round(2)
-    st.dataframe(stats_df, height=400)
+    
+    col1, col2 = st.columns([2, 3])
+    
+    with col1:
+        st.dataframe(stats_df, height=300)
+    
+    with col2:
+        st.write("**Key Numerical Insights:**")
+        
+        # Calculate margin
+        df['margin'] = df['charge_rate'] - df['pay_rate']
+        avg_margin = df['margin'].mean()
+        avg_margin_pct = (df['margin'] / df['charge_rate'] * 100).mean()
+        
+        st.write(f"""
+        - **Pay Rate Range:** ${stats_df.loc['min', 'pay_rate']} to ${stats_df.loc['max', 'pay_rate']} per hour
+        - **Average Pay Rate:** ${stats_df.loc['mean', 'pay_rate']} per hour
+        - **Average Charge Rate:** ${stats_df.loc['mean', 'charge_rate']} per hour
+        - **Average Margin:** ${avg_margin:.2f} per hour ({avg_margin_pct:.1f}% of charge rate)
+        - **Shift Duration:** Most shifts range from {stats_df.loc['min', 'duration']} to {stats_df.loc['max', 'duration']} hours
+        """)
+        
+        # Calculate correlation
+        corr = df[['pay_rate', 'charge_rate', 'duration']].corr().round(2)
+        
+        st.write("**Correlation between Numerical Variables:**")
+        st.dataframe(corr, height=200)
 
 # Marketplace dynamics analysis
 def marketplace_dynamics(df):
@@ -920,60 +1075,59 @@ def insights():
 
 # Main app logic
 def main():
+    # Load data automatically on app startup if not already loaded
+    if 'data' not in st.session_state:
+        try:
+            with st.spinner("Loading CBH marketplace data for analysis..."):
+                data_file = "attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv"
+                df = pd.read_csv(data_file)
+                df = load_and_clean_data(io.StringIO(df.to_csv(index=False)))
+                st.session_state['data'] = df
+        except Exception as e:
+            st.error(f"Error loading case study data: {str(e)}")
+    
     # Create sidebar for navigation
     st.sidebar.title("Navigation")
     
     page = st.sidebar.radio("Go to", list(SECTIONS.keys()))
     
-    # Introduction section does not require data
     if page == "Introduction":
         introduction()
         
-        # Data upload
-        uploaded_file = st.file_uploader("Upload your marketplace data (CSV format)", type="csv")
-        
-        if uploaded_file is not None:
-            with st.spinner("Loading and processing data..."):
-                try:
-                    df = load_and_clean_data(uploaded_file)
-                    st.session_state['data'] = df
-                    st.success("Data loaded successfully!")
-                    
-                    # Show preview
-                    st.subheader("Data Preview")
-                    st.dataframe(df.head(5))
-                    
-                    st.markdown("**Now you can navigate to other sections using the sidebar.**")
-                except Exception as e:
-                    st.error(f"Error loading data: {str(e)}")
-        
-        # Option to use the attached demo dataset
-        st.markdown("---")
-        st.markdown("### Use Demo Dataset")
-        if st.button("Load Demo Dataset"):
-            with st.spinner("Loading demo dataset..."):
-                try:
-                    demo_file = "attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv"
-                    df = pd.read_csv(demo_file)
-                    df = load_and_clean_data(io.StringIO(df.to_csv(index=False)))
-                    st.session_state['data'] = df
-                    st.success("Demo data loaded successfully!")
-                    
-                    # Show preview
-                    st.subheader("Data Preview")
-                    st.dataframe(df.head(5))
-                    
-                    st.markdown("**Now you can navigate to other sections using the sidebar.**")
-                except Exception as e:
-                    st.error(f"Error loading demo data: {str(e)}")
-        
-        # If data exists in session and user wants to clear it
-        elif 'data' in st.session_state:
-            if st.button("Clear loaded data"):
-                del st.session_state['data']
-                st.rerun()
+        # Show data preview
+        if 'data' in st.session_state:
+            df = st.session_state['data']
+            st.subheader("CBH Marketplace Dataset Preview")
+            st.dataframe(df.head(10))
+            
+            # Add key dataset metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Records", f"{len(df):,}")
+            with col2:
+                st.metric("Unique Workers", f"{df['worker_id'].nunique():,}")
+            with col3:
+                st.metric("Unique Workplaces", f"{df['workplace_id'].nunique():,}")
+            with col4:
+                st.metric("Unique Shifts", f"{df['shift_id'].nunique():,}")
+            
+            st.markdown("""
+            ### Interactive Case Study
+            This analysis explores the CBH marketplace data to uncover key patterns, behaviors, and opportunities.
+            Use the navigation sidebar to explore different aspects of the analysis, including marketplace dynamics,
+            worker behavior, workplace patterns, and pricing strategies.
+            
+            ### Key Questions Explored:
+            1. What factors influence marketplace conversion rates?
+            2. How do worker preferences and behaviors impact the marketplace?
+            3. What patterns exist in workplace posting and fulfillment?
+            4. How does pricing affect worker engagement and marketplace efficiency?
+            5. What recommendations can be made to improve marketplace performance?
+            
+            Navigate through the sections to explore these questions and discover insights from the data.
+            """)
     
-    # All other sections require data
+    # All sections now have data access
     elif 'data' in st.session_state:
         df = st.session_state['data']
         
@@ -993,13 +1147,7 @@ def main():
             insights()
     
     else:
-        st.warning("Please upload data in the Introduction section first.")
-        
-        # Quick jump to introduction
-        if st.button("Go to Introduction"):
-            introduction_index = list(SECTIONS.keys()).index("Introduction")
-            st.session_state['current_page'] = introduction_index
-            st.rerun()
+        st.error("Failed to load the case study data. Please refresh the page to try again.")
 
 if __name__ == "__main__":
     main()
