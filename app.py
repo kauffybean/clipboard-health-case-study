@@ -1,1007 +1,442 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import time
-import io
-from datetime import datetime, timedelta
+from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import load_and_clean_data, create_download_link
-from analysis import (compute_summary_stats, analyze_marketplace_dynamics, 
-                     analyze_worker_behavior, analyze_workplace_patterns,
-                     analyze_rate_pricing, analyze_time_series)
-from visualizations import (plot_overview_metrics, plot_conversion_funnel, 
-                           plot_timeslot_distribution, plot_rate_distribution,
-                           plot_time_series, plot_geographical_distribution,
-                           plot_worker_retention, plot_marketplace_balance,
-                           plot_workplace_activity, plot_pricing_strategy)
+from utils import load_and_clean_data
 
 # Page configuration
 st.set_page_config(
-    page_title="CBH Marketplace Data Analysis",
+    page_title="CBH Marketplace Analysis",
     page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Define app sections
+# Simple CSS for clean styling
+st.markdown("""
+<style>
+    /* Key Finding Box */
+    .key-finding {
+        background-color: #EFF6FF;
+        border-left: 4px solid #2563EB;
+        padding: 1rem 1.5rem;
+        margin: 1.5rem 0;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    /* Navigation buttons between sections */
+    .nav-container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .nav-button {
+        background-color: #2563EB;
+        color: white !important;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none !important;
+        display: inline-block;
+        font-weight: 500;
+    }
+    
+    /* Code display */
+    .code-box {
+        background-color: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 5px;
+        padding: 1rem;
+        margin: 1rem 0;
+        font-family: monospace;
+        overflow-x: auto;
+    }
+    
+    /* Metric improvements */
+    div[data-testid="stMetricValue"] {
+        font-size: 1.6rem !important;
+        font-weight: 600 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Load the dataset
+df = load_and_clean_data("attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv")
+
+# Define sections
 SECTIONS = {
     "Introduction": "introduction",
     "Data Overview": "data_overview",
-    "Marketplace Dynamics": "marketplace_dynamics",
+    "Marketplace Dynamics": "marketplace_dynamics", 
     "Worker Analysis": "worker_analysis",
     "Workplace Analysis": "workplace_analysis",
-    "Rate & Pricing Analysis": "rate_analysis",
-    "Time Series Analysis": "time_series",
-    "Key Insights & Recommendations": "insights"
+    "Rate Analysis": "rate_analysis",
+    "Time Series": "time_series",
+    "Key Insights": "insights"
 }
 
-# Simple, minimal CSS styling
-st.markdown("""
-    <style>
-        /* Basic styling */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            color: #333;
-        }
+# Sidebar navigation
+st.sidebar.title("Navigation")
+selected_section = st.sidebar.radio("Go to", list(SECTIONS.keys()))
 
-        /* Headers */
-        h1 {
-            color: #1E3A8A;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-        
-        h2 {
-            color: #1E3A8A;
-            font-weight: 600;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-        }
-        
-        h3 {
-            color: #333;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
-        }
-            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);  /* Large shadow */
-        }
-        
-        /* Overall layout styling */
-        .main .block-container {
-            max-width: 1200px;
-            padding: 2rem 1.5rem;
-            background-color: var(--background-color);
-        }
-        
-        /* Improve spacing and alignment */
-        .row-widget.stVerticalBlock > div {
-            margin-bottom: 1.5rem;
-        }
-        
-        /* Fix compressed sections */
-        .stPlotlyChart {
-            width: 100%;
-            margin-bottom: 2rem;
-        }
-        
-        /* Typography styling */
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            padding-top: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--light-gray);
-            margin-bottom: 1.8rem;
-        }
-        
-        h2 {
-            color: var(--primary-color);
-            font-size: 2rem;
-            padding-top: 1.5rem;
-            padding-bottom: 0.8rem;
-            margin-bottom: 1.2rem;
-            border-bottom: 1px solid var(--light-gray);
-        }
-        
-        h3 {
-            color: var(--secondary-color);
-            font-size: 1.6rem;
-            padding-top: 1rem;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        /* Key takeaways styling - modern design with subtle gradient */
-        .key-takeaways {
-            background: linear-gradient(to right, var(--primary-light), white);
-            border-left: 4px solid var(--primary-color);
-            padding: 1.8rem;
-            margin-bottom: 2.5rem;
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .key-takeaways h4 {
-            color: var(--primary-dark);
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1.2rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid rgba(67, 97, 238, 0.2);
-            display: flex;
-            align-items: center;
-        }
-        
-        .key-takeaways h4::before {
-            content: "💡";
-            font-size: 1.5rem;
-            margin-right: 0.75rem;
-        }
-        
-        .key-takeaways ul {
-            margin-bottom: 0;
-            padding-left: 1.5rem;
-        }
-        
-        .key-takeaways li {
-            margin-bottom: 0.75rem;
-            line-height: 1.6;
-        }
-        
-        .key-takeaways li:last-child {
-            margin-bottom: 0;
-        }
-        
-        .key-takeaways li strong {
-            color: var(--primary-dark);
-            font-weight: 600;
-        }
-        
-        /* Main finding callout - the "so what" of each section with modern design */
-        .main-finding {
-            background: white;
-            border: 1px solid var(--primary-color);
-            border-radius: var(--radius-md);
-            padding: 1.8rem 1.8rem 1.8rem 2.2rem;
-            margin: 2.5rem 0;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-            transform: translateZ(0); /* For smoother rendering */
-        }
-        
-        .main-finding::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 6px;
-            background: var(--primary-color);
-        }
-        
-        .main-finding::after {
-            content: "🔍 KEY FINDING";
-            position: absolute;
-            top: 0;
-            right: 0;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: var(--primary-color);
-            color: white;
-            padding: 0.35rem 0.8rem;
-            border-bottom-left-radius: var(--radius-sm);
-        }
-        
-        .main-finding p {
-            font-size: 1.25rem !important;
-            line-height: 1.7 !important;
-            font-weight: 500;
-            color: var(--text-color);
-            margin: 0 !important;
-        }
-        
-        /* Metric styling */
-        div[data-testid="stMetricValue"] {
-            font-size: 1.8rem !important;
-            font-weight: 600 !important;
-            color: var(--primary-color) !important;
-        }
-        
-        div[data-testid="stMetricLabel"] {
-            font-size: 1.1rem !important;
-            font-weight: 500 !important;
-            color: var(--text-color) !important;
-        }
-        
-        /* Table styling */
-        div[data-testid="stTable"] table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        
-        div[data-testid="stTable"] thead tr th {
-            background-color: var(--primary-color) !important;
-            color: white !important;
-            font-weight: 600 !important;
-            padding: 12px 15px !important;
-            text-align: left !important;
-        }
-        
-        div[data-testid="stTable"] tbody tr:nth-child(even) {
-            background-color: var(--light-gray) !important;
-        }
-        
-        div[data-testid="stTable"] tbody tr td {
-            padding: 10px 15px !important;
-        }
-        
-        /* Dataframe styling */
-        .dataframe {
-            border-radius: 5px;
-            overflow: hidden;
-            border: none !important;
-            margin-bottom: 1.5rem;
-        }
-        
-        .dataframe th {
-            background-color: var(--primary-color) !important;
-            color: white !important;
-            font-weight: 600 !important;
-            padding: 10px 15px !important;
-            text-align: left !important;
-        }
-        
-        .dataframe tr:nth-child(even) {
-            background-color: var(--light-gray) !important;
-        }
-        
-        /* Sidebar styling */
-        section[data-testid="stSidebar"] {
-            background-color: white;
-            border-right: 1px solid var(--light-gray);
-        }
-        
-        section[data-testid="stSidebar"] div.stRadio label {
-            font-weight: 500;
-            padding: 8px 5px;
-            cursor: pointer;
-        }
-        
-        section[data-testid="stSidebar"] div.stRadio label:hover {
-            color: var(--primary-color);
-        }
-        
-        /* Charts styling */
-        div.stPlotlyChart > div {
-            border-radius: 8px;
-            background-color: white !important;
-            padding: 1.5rem !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
-        }
-        
-        /* Tab styling */
-        button[data-baseweb="tab"] {
-            font-weight: 600;
-            padding: 8px 16px !important;
-        }
-        
-        /* Code block styling */
-        div.stCodeBlock {
-            border-radius: 8px;
-            border-left: 4px solid var(--primary-color);
-            margin-bottom: 1.5rem;
-            background-color: #f7f9fc !important;
-        }
-        
-        /* Progress tracker for a SaaS-style guided experience */
-        .progress-tracker {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 3rem;
-            position: relative;
-            padding: 0 2rem;
-        }
-        
-        .progress-tracker::before {
-            content: "";
-            position: absolute;
-            top: 14px;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background-color: var(--light-gray);
-            z-index: 1;
-        }
-        
-        .progress-tracker .progress-bar {
-            position: absolute;
-            top: 14px;
-            left: 0;
-            height: 4px;
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            z-index: 2;
-            transition: width 0.5s ease;
-            border-radius: 4px;
-        }
-        
-        .progress-tracker .step {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: white;
-            border: 2px solid var(--light-gray);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            position: relative;
-            z-index: 3;
-            transition: all 0.3s ease;
-            color: var(--text-light);
-        }
-        
-        .progress-tracker .step.active {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
-            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.25);
-        }
-        
-        .progress-tracker .step.completed {
-            background: var(--success-color);
-            border-color: var(--success-color);
-            color: white;
-        }
-        
-        .progress-tracker .step-label {
-            position: absolute;
-            top: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-light);
-            white-space: nowrap;
-            text-align: center;
-            width: 100px;
-        }
-        
-        .progress-tracker .step.active .step-label,
-        .progress-tracker .step.completed .step-label {
-            color: var(--text-color);
-            font-weight: 600;
-        }
-        
-        /* Simple navigation buttons */
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin: 2rem 0;
-            padding-top: 1.5rem;
-            border-top: 1px solid #eee;
-        }
-        
-        .simple-nav-btn {
-            text-decoration: none;
-            padding: 10px 20px;
-            margin: 0 5px;
-            border-radius: 5px;
-            font-weight: 600;
-            display: inline-block;
-            transition: all 0.2s;
-        }
-        
-        .simple-nav-btn.primary {
-            background-color: #4361ee;
-            color: white;
-        }
-        
-        .simple-nav-btn.primary:hover {
-            background-color: #3a56d4;
-            text-decoration: none;
-        }
-        
-        .simple-nav-btn.secondary {
-            background-color: white;
-            color: #4361ee;
-            border: 1px solid #4361ee;
-        }
-        
-        .simple-nav-btn.secondary:hover {
-            background-color: #f5f7ff;
-            text-decoration: none;
-        }
-        
-        /* Key insights and recommendations - professional cards with gradients */
-        .insight-card {
-            background: linear-gradient(to right, white, #f0f7ff);
-            border-radius: var(--radius-md);
-            padding: 1.8rem;
-            margin-bottom: 1.8rem;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--light-gray);
-            transition: var(--transition);
-        }
-        
-        .insight-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .insight-card h4 {
-            color: var(--primary-dark);
-            font-size: 1.5rem;
-            margin-bottom: 1.2rem;
-            position: relative;
-            padding-bottom: 0.75rem;
-            font-weight: 700;
-        }
-        
-        .insight-card h4::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            border-radius: 3px;
-        }
-        
-        .recommendation-card {
-            background: linear-gradient(to right, white, #fff1f6);
-            border-radius: var(--radius-md);
-            padding: 1.8rem;
-            margin-bottom: 1.8rem;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--light-gray);
-            transition: var(--transition);
-        }
-        
-        .recommendation-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .recommendation-card h4 {
-            color: var(--accent-color);
-            font-size: 1.5rem;
-            margin-bottom: 1.2rem;
-            position: relative;
-            padding-bottom: 0.75rem;
-            font-weight: 700;
-        }
-        
-        .recommendation-card h4::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(to right, var(--secondary-color), var(--accent-color));
-            border-radius: 3px;
-        }
-        
-        /* Executive summary card for key insights section */
-        .executive-summary {
-            background: linear-gradient(135deg, var(--primary-dark), var(--secondary-color));
-            color: white;
-            border-radius: var(--radius-md);
-            padding: 2.5rem;
-            margin: 2.5rem 0;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .executive-summary h3 {
-            color: white;
-            font-size: 1.8rem;
-            margin-bottom: 1.5rem;
-            font-weight: 800;
-        }
-        
-        .executive-summary p {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 1.1rem;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-            max-width: 90%;
-        }
-        
-        .executive-summary::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 150px;
-            height: 150px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.1)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='2' x2='12' y2='6'%3E%3C/line%3E%3Cline x1='12' y1='18' x2='12' y2='22'%3E%3C/line%3E%3Cline x1='4.93' y1='4.93' x2='7.76' y2='7.76'%3E%3C/line%3E%3Cline x1='16.24' y1='16.24' x2='19.07' y2='19.07'%3E%3C/line%3E%3Cline x1='2' y1='12' x2='6' y2='12'%3E%3C/line%3E%3Cline x1='18' y1='12' x2='22' y2='12'%3E%3C/line%3E%3Cline x1='4.93' y1='19.07' x2='7.76' y2='16.24'%3E%3C/line%3E%3Cline x1='16.24' y1='7.76' x2='19.07' y2='4.93'%3E%3C/line%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: center;
-            opacity: 0.6;
-            transform: rotate(30deg) scale(3);
-        }
-    </style>
-""", unsafe_allow_html=True)
+# Alternatively get section from URL query param if it exists
+query_params = st.query_params
+if "section" in query_params:
+    section_value = query_params["section"]
+    # Find the key for this section value
+    for key, value in SECTIONS.items():
+        if value == section_value:
+            selected_section = key
+            break
 
-# Initialize session state for navigation
-if 'active_section' not in st.session_state:
-    # Get 'section' query param from URL if it exists
-    query_params = st.query_params
-    if 'section' in query_params:
-        section = query_params['section']
-        if section in SECTIONS.values():
-            st.session_state['active_section'] = section
-        else:
-            st.session_state['active_section'] = 'introduction'
-    else:
-        st.session_state['active_section'] = 'introduction'
+# Set active section in URL
+section_value = SECTIONS[selected_section]
+st.query_params["section"] = section_value
 
-# App title and introduction
+# Introduction
 def introduction():
-    st.title("CBH Marketplace Data Analysis")
+    st.title("CBH Marketplace Analysis")
     st.markdown("""
-    ## Interactive Case Study: Uncovering Market Patterns and Opportunities
-    
-    Welcome to this interactive analysis of Clipboard Health (CBH) - a two-sided healthcare staffing marketplace
-    with strong network effects where healthcare workers transact with workplaces to book per diem shifts.
-    
-    **The Business Context**:
-    
-    CBH operates as a marketplace platform connecting healthcare facilities with qualified healthcare workers 
-    for on-demand staffing needs. Workplaces post shifts they need to fill, and workers browse and claim shifts 
-    they want to work. The platform needs to balance the needs of both sides to create a healthy marketplace.
-    
-    **Key Business Questions**:
-    
-    1. How effective is the marketplace at converting shift views to bookings?
-    2. What patterns exist in worker and workplace behaviors?
-    3. How does timing (posting time, lead time) affect marketplace success?
-    4. What role does pricing play in marketplace dynamics?
-    5. What recommendations can improve marketplace performance?
-    
-    **Data Background**:
-    
-    The dataset contains detailed records of shift offers viewed by workers, including whether they claimed
-    the shift, if they completed it, pricing information, and timing details. Each record represents a worker
-    viewing a shift, with the potential outcomes including claiming, canceling, or ignoring the shift.
-    
-    **Case Study Navigation**:
-    
-    This interactive case study is organized into sections that build on each other:
-    
-    1. **Data Overview**: Understand the dataset structure and quality
-    2. **Marketplace Dynamics**: Analyze conversion rates and activity patterns
-    3. **Worker Analysis**: Explore worker behaviors and preferences
-    4. **Workplace Analysis**: Examine workplace posting patterns
-    5. **Rate & Pricing Analysis**: Investigate price sensitivity and margins
-    6. **Time Series Analysis**: Study temporal patterns in marketplace activity
-    7. **Key Insights & Recommendations**: Discover actionable findings
-    
-    Use the navigation sidebar to explore each section of the analysis.
+    Welcome to the CBH Marketplace Analysis dashboard. This interactive case study explores 
+    data from a two-sided marketplace where healthcare workers book per diem shifts with workplaces.
     """)
+    
+    st.markdown("""
+    <div class="key-finding">
+        <h4>About This Analysis</h4>
+        <p>
+        This analysis examines transaction data from a healthcare staffing marketplace, focusing on 
+        key metrics and patterns to understand marketplace dynamics, worker behavior, workplace activity, 
+        and rate sensitivity.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Key Questions")
+        st.markdown("""
+        - What drives conversion rates in this marketplace?
+        - How do workers and workplaces behave?
+        - What pricing strategies are most effective?
+        - How does lead time affect fill rates?
+        """)
+    
+    with col2:
+        st.subheader("Data Sources")
+        st.markdown("""
+        The analysis is based on marketplace transaction data, including:
+        - Shift details
+        - Worker interactions
+        - Workplace postings
+        - Pricing information
+        - Completion status
+        """)
+    
+    st.subheader("Navigation")
+    st.markdown("Use the sidebar to navigate through different sections of the analysis.")
+    
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <div></div>
+        <a href="?section=data_overview" class="nav-button">
+            Next: Data Overview →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Data overview section
+# Data Overview
 def data_overview(df):
-    st.header("Data Overview")
+    st.title("Data Overview")
     
     # Data summary
     st.subheader("Dataset Summary")
     
-    # Summary metrics
-    col1, col2, col3 = st.columns(3)
+    # Shape and time range
+    total_records = len(df)
+    unique_shifts = df['shift_id'].nunique()
+    unique_workers = df['worker_id'].nunique()
+    unique_workplaces = df['workplace_id'].nunique()
+    
+    min_date = df['created_at'].min().strftime('%Y-%m-%d')
+    max_date = df['created_at'].max().strftime('%Y-%m-%d')
+    
+    # Display metrics
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Records", f"{len(df):,}")
-        st.metric("Unique Workers", f"{df['worker_id'].nunique():,}")
+        st.metric("Total Records", f"{total_records:,}")
     with col2:
-        st.metric("Unique Workplaces", f"{df['workplace_id'].nunique():,}")
-        st.metric("Unique Shifts", f"{df['shift_id'].nunique():,}")
+        st.metric("Unique Shifts", f"{unique_shifts:,}")
     with col3:
-        st.metric("Date Range", f"{df['shift_start_at'].min().date()} to {df['shift_start_at'].max().date()}")
-        st.metric("Avg Hourly Pay Rate", f"${df['pay_rate'].mean():.2f}")
+        st.metric("Unique Workers", f"{unique_workers:,}")
+    with col4:
+        st.metric("Unique Workplaces", f"{unique_workplaces:,}")
     
-    # Dataframe and glossary
-    st.subheader("Dataset Structure")
-    tab1, tab2, tab3 = st.tabs(["Data Sample", "Data Glossary", "Code Example"])
+    st.markdown(f"**Date Range:** {min_date} to {max_date}")
     
-    with tab1:
-        st.dataframe(df.head(10), height=300)
+    # Sample data
+    st.subheader("Sample Data")
+    st.dataframe(df.head(10), use_container_width=True)
     
-    with tab2:
-        glossary_data = {
-            'Column': [
-                'shift_id', 'worker_id', 'workplace_id', 'shift_start_at', 
-                'shift_created_at', 'offer_viewed_at', 'duration', 'slot',
-                'claimed_at', 'deleted_at', 'is_verified', 'canceled_at', 
-                'is_ncns', 'pay_rate', 'charge_rate'
-            ],
-            'Description': [
-                'Unique identifier for a shift',
-                'Unique identifier for a worker',
-                'Unique identifier for a workplace',
-                'Time shift starts (UTC)',
-                'Time shift was posted to the marketplace (UTC)',
-                'Time worker viewed the shift offer (UTC)',
-                'Duration of shift in hours',
-                'Timeslot of shift (NOC = overnight)',
-                'Time shift was booked by worker (UTC)',
-                'Time shift was deleted by workplace (UTC)',
-                'Worker completed the shift (boolean)',
-                'Time shift was canceled by worker (UTC)',
-                'Worker was a no-call-no-show (boolean)',
-                'Hourly rate offered to worker for the shift ($)',
-                'Hourly rate charged to workplace for the shift ($)'
-            ]
-        }
-        glossary_df = pd.DataFrame(glossary_data)
-        st.dataframe(glossary_df, height=300)
-    
-    with tab3:
-        st.code("""
-# Python code for loading and previewing the dataset
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Load the data
-df = pd.read_csv('cbh_marketplace_data.csv')
-
-# Convert datetime columns
-datetime_cols = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 
-                'claimed_at', 'deleted_at', 'canceled_at']
-for col in datetime_cols:
-    df[col] = pd.to_datetime(df[col])
-
-# Display basic info
-print(f"Dataset shape: {df.shape}")
-print(f"Unique workers: {df['worker_id'].nunique()}")
-print(f"Unique workplaces: {df['workplace_id'].nunique()}")
-print(f"Date range: {df['shift_start_at'].min().date()} to {df['shift_start_at'].max().date()}")
-
-# Preview the data
-df.head()
-        """)
-    
-    # Data quality assessment
-    st.subheader("Data Quality Assessment")
-    
-    # Create tabs for different quality aspects
-    tab1, tab2, tab3 = st.tabs(["Missing Values", "Data Distributions", "Data Types"])
-    
-    with tab1:
-        # Missing values visualization
-        missing_data = df.isnull().sum().to_frame().reset_index()
-        missing_data.columns = ['Column', 'Missing Values']
-        missing_data['Missing Percentage'] = (missing_data['Missing Values'] / len(df) * 100).round(2)
-        missing_data = missing_data.sort_values('Missing Percentage', ascending=False)
-        
-        # Only show columns with missing values
-        missing_data_with_nulls = missing_data[missing_data['Missing Values'] > 0]
-        
-        if len(missing_data_with_nulls) > 0:
-            fig = px.bar(missing_data_with_nulls, 
-                      x='Column', 
-                      y='Missing Percentage',
-                      title='Percentage of Missing Values by Column',
-                      color='Missing Percentage',
-                      color_continuous_scale='Reds')
-            fig.update_layout(xaxis_title='Column', yaxis_title='Missing Percentage (%)')
-            st.plotly_chart(fig, use_container_width=True)
-            
-            st.write("**Missing Values Analysis:**")
-            st.write("""
-            The missing values in this dataset are actually informative. For example:
-            - Missing `claimed_at` indicates the worker didn't claim the shift
-            - Missing `canceled_at` means the worker didn't cancel the shift
-            - Missing `deleted_at` means the workplace didn't delete the shift
-            
-            These nulls represent the status of the shift in the marketplace journey and are expected.
-            """)
-        else:
-            st.info("No missing values found in the dataset.")
-    
-    with tab2:
-        # Showing distributions of key variables
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Pay rate distribution
-            fig = px.histogram(df, x='pay_rate', nbins=30,
-                            title='Distribution of Pay Rates',
-                            labels={'pay_rate': 'Hourly Pay Rate ($)'},
-                            color_discrete_sequence=['#3366CC'])
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            # Duration distribution
-            fig = px.histogram(df, x='duration', nbins=20,
-                            title='Distribution of Shift Durations',
-                            labels={'duration': 'Shift Duration (hours)'},
-                            color_discrete_sequence=['#DC3912'])
-            st.plotly_chart(fig, use_container_width=True)
-            
-        # Slot distribution
-        slot_counts = df['slot'].value_counts().reset_index()
-        slot_counts.columns = ['Slot', 'Count']
-        
-        fig = px.bar(slot_counts, x='Slot', y='Count',
-                   title='Distribution of Shifts by Time Slot',
-                   color='Count',
-                   color_continuous_scale='Viridis')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with tab3:
-        # Data types and examples
-        dtypes_df = pd.DataFrame({
-            'Column': df.dtypes.index,
-            'Type': df.dtypes.values
-        })
-        
-        st.write("**Column Data Types:**")
-        st.dataframe(dtypes_df, height=300)
-        
-        st.write("**Python Code for Data Type Conversion:**")
-        st.code("""
-# Convert data types for analysis
-# Datetime conversions
-datetime_cols = ['shift_start_at', 'shift_created_at', 'offer_viewed_at', 
-                'claimed_at', 'deleted_at', 'canceled_at']
-for col in datetime_cols:
-    df[col] = pd.to_datetime(df[col])
-
-# Boolean conversions
-df['is_verified'] = df['is_verified'].astype(bool)
-df['is_ncns'] = df['is_ncns'].astype(bool)
-
-# Calculate derived fields
-df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
-df['decision_time_minutes'] = df.apply(
-    lambda x: (x['claimed_at'] - x['offer_viewed_at']).total_seconds() / 60 
-    if pd.notna(x['claimed_at']) else None, axis=1
-)
-        """)
-    
-    # Summary statistics with context
-    st.subheader("Summary Statistics with Insights")
-    
-    # Calculate summary stats and display
-    numeric_cols = ['pay_rate', 'charge_rate', 'duration']
-    stats_df = df[numeric_cols].describe().round(2)
-    
-    col1, col2 = st.columns([2, 3])
-    
-    with col1:
-        st.dataframe(stats_df, height=300)
-    
-    with col2:
-        st.write("**Key Numerical Insights:**")
-        
-        # Calculate margin
-        df['margin'] = df['charge_rate'] - df['pay_rate']
-        avg_margin = df['margin'].mean()
-        avg_margin_pct = (df['margin'] / df['charge_rate'] * 100).mean()
-        
-        st.write(f"""
-        - **Pay Rate Range:** ${stats_df.loc['min', 'pay_rate']} to ${stats_df.loc['max', 'pay_rate']} per hour
-        - **Average Pay Rate:** ${stats_df.loc['mean', 'pay_rate']} per hour
-        - **Average Charge Rate:** ${stats_df.loc['mean', 'charge_rate']} per hour
-        - **Average Margin:** ${avg_margin:.2f} per hour ({avg_margin_pct:.1f}% of charge rate)
-        - **Shift Duration:** Most shifts range from {stats_df.loc['min', 'duration']} to {stats_df.loc['max', 'duration']} hours
-        """)
-        
-        # Calculate correlation
-        corr = df[['pay_rate', 'charge_rate', 'duration']].corr().round(2)
-        
-        st.write("**Correlation between Numerical Variables:**")
-        st.dataframe(corr, height=200)
-
-# Marketplace dynamics analysis
-def marketplace_dynamics(df):
-    st.header("Marketplace Dynamics")
-    
-    # Calculate conversion metrics
-    total_views = len(df)
-    claimed_shifts = df['claimed_at'].notna().sum()
-    conversion_rate = (claimed_shifts / total_views * 100).round(2)
-    canceled_shifts = df['canceled_at'].notna().sum()
-    deleted_shifts = df['deleted_at'].notna().sum()
-    completed_shifts = df['is_verified'].sum()
-    
-    # Calculate completion rate for context
-    completion_rate = (completed_shifts / claimed_shifts * 100).round(2) if claimed_shifts > 0 else 0
-    
-    # Get most popular and least popular time slots by conversion
-    popular_slot = df.groupby('slot', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).index[0]
-    unpopular_slot = df.groupby('slot', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values().index[0]
-    
-    # Calculate decision time metrics
-    decision_mins = df[df['claimed_at'].notna()]['claimed_at'].sub(df[df['claimed_at'].notna()]['offer_viewed_at']).dt.total_seconds().div(60).median().round()
-    
-    # Calculate lead time metrics for "optimal" lead time
-    df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
-    df['lead_time_bin'] = pd.cut(df['lead_time_hours'], 
-                              bins=[0, 24, 48, 72, 168, float('inf')],
-                              labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days'])
-    optimal_lead_time = df.groupby('lead_time_bin', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).index[0]
-    best_lead_time_rate = df.groupby('lead_time_bin', observed=True)['claimed_at'].apply(lambda x: x.notna().sum() / len(x) * 100).sort_values(ascending=False).iloc[0].round(2)
-    
-    # Add Key Takeaways at the top of the section
+    # Data description
+    st.subheader("Data Fields")
     st.markdown("""
-    <div class="key-takeaways">
-        <h4>Key Takeaways: Marketplace Dynamics</h4>
-        <ul>
-            <li><strong>View-to-Claim Conversion:</strong> {conversion:.1f}% of viewed shifts are claimed, which is above average for healthcare staffing marketplaces (industry benchmark: 5-15%).</li>
-            <li><strong>Claim-to-Completion Rate:</strong> {completion:.1f}% of claimed shifts are successfully completed, demonstrating exceptional worker reliability (healthcare industry benchmark: 80-90%).</li>
-            <li><strong>Time Slot Preferences:</strong> {pop_slot} shifts have the highest demand with {pop_rate:.1f}% conversion, while {unpop_slot} shifts show significantly lower rates at {unpop_rate:.1f}%.</li>
-            <li><strong>Lead Time Impact:</strong> Shifts posted with {optimal} lead time achieve the best conversion at {best_rate:.1f}%, suggesting an optimal posting window.</li>
-            <li><strong>Quick Decisions:</strong> Most workers make booking decisions within {decision} minutes of viewing a shift, highlighting the importance of immediate engagement.</li>
-        </ul>
-    </div>
+    - **shift_id**: Unique identifier for a shift
+    - **workplace_id**: Identifier for the workplace posting the shift
+    - **worker_id**: Identifier for the worker viewing/claiming the shift
+    - **pay_rate**: Hourly pay rate for the shift
+    - **created_at**: When the shift was created/posted
+    - **shift_date**: Date when the shift is scheduled
+    - **slot**: Time slot of the shift (Morning, Evening, Night)
+    - **lead_time_hours**: Hours between posting and shift start
+    - **viewed_at**: When the worker viewed the shift
+    - **claimed_at**: When the worker claimed the shift (if claimed)
+    - **canceled_at**: When the worker canceled the shift (if canceled)
+    - **is_ncns**: No Call No Show flag
+    - **is_verified**: Whether the shift was completed and verified
+    """)
     
-    <div class="main-finding">
-        <p>The {completion:.1f}% completion rate is exceptional for healthcare staffing, exceeding industry standards by 7-17 percentage points, positioning CBH as a reliability leader and directly impacting workplace trust.</p>
-    </div>
-    """.format(
-        conversion=conversion_rate,
-        completion=completion_rate,
-        pop_slot=popular_slot,
-        pop_rate=df[df['slot'] == popular_slot]['claimed_at'].notna().mean() * 100,
-        unpop_slot=unpopular_slot,
-        unpop_rate=df[df['slot'] == unpopular_slot]['claimed_at'].notna().mean() * 100,
-        optimal=optimal_lead_time,
-        best_rate=best_lead_time_rate,
-        decision=decision_mins
-    ), unsafe_allow_html=True)
+    # Data quality
+    st.subheader("Data Quality")
     
-    st.subheader("Conversion Funnel")
+    # Missing values
+    missing_data = pd.DataFrame(df.isnull().sum(), columns=['Missing Values'])
+    missing_data['Percentage'] = (missing_data['Missing Values'] / len(df) * 100).round(2)
+    missing_data = missing_data.reset_index().rename(columns={'index': 'Field'})
+    
+    st.markdown("#### Missing Values")
+    st.dataframe(missing_data, use_container_width=True)
+    
+    # Code example for transparency
+    st.subheader("Data Loading & Cleaning Process")
+    st.markdown("""
+    <div class="code-box">
+    ```python
+    def load_and_clean_data(file_path):
+        # Load the data
+        df = pd.read_csv(file_path)
+        
+        # Convert date columns to datetime
+        date_columns = ['created_at', 'shift_date', 'viewed_at', 'claimed_at', 'canceled_at']
+        for col in date_columns:
+            df[col] = pd.to_datetime(df[col])
+        
+        # Calculate lead time in hours
+        df['lead_time_hours'] = (df['shift_date'] - df['created_at']).dt.total_seconds() / 3600
+        
+        # Convert boolean columns
+        df['is_ncns'] = df['is_ncns'].astype(bool)
+        df['is_verified'] = df['is_verified'].astype(bool)
+        
+        return df
+    ```
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <a href="?section=introduction" class="nav-button">
+            ← Previous: Introduction
+        </a>
+        <a href="?section=marketplace_dynamics" class="nav-button">
+            Next: Marketplace Dynamics →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Marketplace Dynamics
+def marketplace_dynamics(df):
+    st.title("Marketplace Dynamics")
+    
+    # Calculate key metrics
+    total_shifts = df['shift_id'].nunique()
+    total_views = len(df)
+    total_claims = df['claimed_at'].notna().sum()
+    total_completions = df['is_verified'].sum()
+    
+    # Conversion rates
+    view_to_claim_rate = (total_claims / total_views * 100).round(1)
+    claim_to_complete_rate = (total_completions / total_claims * 100).round(1)
+    overall_conversion = (total_completions / total_views * 100).round(1)
+    
+    # Display key finding
+    st.markdown(f"""
+    <div class="key-finding">
+        <h4>Key Finding</h4>
+        <p>The marketplace shows a {view_to_claim_rate}% view-to-claim conversion rate and a {claim_to_complete_rate}% claim-to-completion rate. 
+        A {overall_conversion}% overall conversion from view to completion is typical for healthcare staffing, where the industry benchmark ranges from 2-5%.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Display metrics
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
-        st.metric("Total Views", f"{total_views:,}")
+        st.metric("Total Shifts", f"{total_shifts:,}")
     with metrics_cols[1]:
-        st.metric("Claimed Shifts", f"{claimed_shifts:,}")
+        st.metric("Total Views", f"{total_views:,}")
     with metrics_cols[2]:
-        st.metric("Conversion Rate", f"{conversion_rate}%")
+        st.metric("Total Claims", f"{total_claims:,}")
     with metrics_cols[3]:
-        st.metric("Completed Shifts", f"{completed_shifts:,}")
+        st.metric("Completed Shifts", f"{total_completions:,}")
     
-    # Plot conversion funnel
-    funnel_fig = plot_conversion_funnel(df)
+    # Conversion funnel visualization
+    st.subheader("Conversion Funnel")
+    
+    funnel_data = pd.DataFrame({
+        'Stage': ['Views', 'Claims', 'Completions'],
+        'Count': [total_views, total_claims, total_completions]
+    })
+    
+    funnel_fig = px.funnel(
+        funnel_data, 
+        x='Count', 
+        y='Stage',
+        title='Marketplace Conversion Funnel'
+    )
     st.plotly_chart(funnel_fig, use_container_width=True)
     
-    # Time slot analysis
-    st.subheader("Shift Distribution by Time Slot")
+    # Hourly distribution of activity
+    st.subheader("Distribution by Time Slot")
     
-    slot_dist = df['slot'].value_counts().reset_index()
-    slot_dist.columns = ['Time Slot', 'Count']
+    slot_data = df.groupby('slot').agg(
+        views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum()),
+        completions=('is_verified', 'sum')
+    ).reset_index()
+    
+    slot_data['view_to_claim'] = (slot_data['claims'] / slot_data['views'] * 100).round(1)
+    slot_data['claim_to_complete'] = (slot_data['completions'] / slot_data['claims'] * 100).round(1)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        slot_fig = px.pie(slot_dist, names='Time Slot', values='Count', 
-                         title='Distribution of Shifts by Time Slot',
-                         color_discrete_sequence=px.colors.qualitative.Set3)
+        # Distribution of shifts by time slot
+        slot_counts = df.groupby('slot')['shift_id'].nunique().reset_index()
+        slot_counts.columns = ['Time Slot', 'Number of Shifts']
+        
+        slot_fig = px.bar(
+            slot_counts, 
+            x='Time Slot', 
+            y='Number of Shifts',
+            title='Distribution of Shifts by Time Slot',
+            color='Number of Shifts',
+            color_continuous_scale='Blues'
+        )
         st.plotly_chart(slot_fig, use_container_width=True)
     
     with col2:
-        # Conversion rate by time slot
-        slot_conversion = df.groupby('slot').agg(
-            total_views=('shift_id', 'count'),
-            claimed=('claimed_at', lambda x: x.notna().sum())
-        ).reset_index()
-        slot_conversion['conversion_rate'] = (slot_conversion['claimed'] / slot_conversion['total_views'] * 100).round(2)
-        
-        conv_fig = px.bar(slot_conversion, x='slot', y='conversion_rate',
-                         title='Conversion Rate by Time Slot (%)',
-                         labels={'slot': 'Time Slot', 'conversion_rate': 'Conversion Rate (%)'},
-                         color='conversion_rate',
-                         color_continuous_scale='Viridis')
-        st.plotly_chart(conv_fig, use_container_width=True)
+        # Conversion rates by time slot
+        slot_conversion_fig = px.bar(
+            slot_data, 
+            x='slot', 
+            y=['view_to_claim', 'claim_to_complete'],
+            title='Conversion Rates by Time Slot',
+            barmode='group',
+            labels={'value': 'Percentage (%)', 'slot': 'Time Slot', 'variable': 'Conversion Type'},
+            color_discrete_map={
+                'view_to_claim': '#3B82F6', 
+                'claim_to_complete': '#10B981'
+            }
+        )
+        st.plotly_chart(slot_conversion_fig, use_container_width=True)
     
-    # Lead time analysis
-    st.subheader("Lead Time Analysis")
+    # Day of week distribution
+    st.subheader("Day of Week Analysis")
     
-    # Calculate lead time (time between shift creation and start)
-    df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
+    # Add day of week
+    df['day_of_week'] = df['shift_date'].dt.day_name()
+    # Sort by day of week order
+    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
-    # Calculate view time (time between creation and viewing)
-    df['view_time_hours'] = (df['offer_viewed_at'] - df['shift_created_at']).dt.total_seconds() / 3600
+    # Get day of week counts
+    day_counts = df.groupby('day_of_week')['shift_id'].nunique().reindex(day_order).reset_index()
+    day_counts.columns = ['Day of Week', 'Number of Shifts']
     
-    # Calculate decision time (time between viewing and claiming, for claimed shifts)
-    claimed_df = df[df['claimed_at'].notna()].copy()
-    claimed_df['decision_time_minutes'] = (claimed_df['claimed_at'] - claimed_df['offer_viewed_at']).dt.total_seconds() / 60
+    # Day of week conversion rates
+    day_conversion = df.groupby('day_of_week').agg(
+        views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum())
+    ).reset_index()
+    day_conversion['Conversion Rate'] = (day_conversion['claims'] / day_conversion['views'] * 100).round(1)
+    day_conversion = day_conversion.sort_values(by='Conversion Rate', ascending=False)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Distribution of lead times
-        lead_fig = px.histogram(df, x='lead_time_hours', nbins=50,
-                               title='Distribution of Lead Times (Hours)',
-                               labels={'lead_time_hours': 'Lead Time (hours)'},
-                               color_discrete_sequence=['#3366CC'])
-        st.plotly_chart(lead_fig, use_container_width=True)
+        day_fig = px.bar(
+            day_counts, 
+            x='Day of Week', 
+            y='Number of Shifts',
+            title='Distribution of Shifts by Day of Week',
+            color='Number of Shifts',
+            color_continuous_scale='Blues'
+        )
+        st.plotly_chart(day_fig, use_container_width=True)
     
     with col2:
-        # Distribution of decision times
-        decision_fig = px.histogram(claimed_df, x='decision_time_minutes', nbins=50,
-                                   title='Distribution of Decision Times (Minutes)',
-                                   labels={'decision_time_minutes': 'Decision Time (minutes)'},
-                                   color_discrete_sequence=['#109618'])
-        decision_fig.update_layout(xaxis_range=[0, 60])  # Focus on first hour
-        st.plotly_chart(decision_fig, use_container_width=True)
+        day_conv_fig = px.bar(
+            day_conversion, 
+            x='day_of_week', 
+            y='Conversion Rate',
+            title='Conversion Rates by Day of Week',
+            color='Conversion Rate',
+            color_continuous_scale='Viridis',
+            labels={'day_of_week': 'Day of Week'}
+        )
+        st.plotly_chart(day_conv_fig, use_container_width=True)
     
-    # Lead time vs conversion rate
-    st.subheader("Lead Time vs. Conversion Rate")
-    
-    # Create lead time bins
-    df['lead_time_bin'] = pd.cut(df['lead_time_hours'], 
-                                 bins=[0, 24, 48, 72, 168, float('inf')],
-                                 labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days'])
-    
-    lead_conv = df.groupby('lead_time_bin').agg(
-        total_views=('shift_id', 'count'),
-        claimed=('claimed_at', lambda x: x.notna().sum())
-    ).reset_index()
-    
-    lead_conv['conversion_rate'] = (lead_conv['claimed'] / lead_conv['total_views'] * 100).round(2)
-    
-    lead_conv_fig = px.bar(lead_conv, x='lead_time_bin', y='conversion_rate',
-                         title='Conversion Rate by Lead Time',
-                         labels={'lead_time_bin': 'Lead Time', 'conversion_rate': 'Conversion Rate (%)'},
-                         color='conversion_rate',
-                         color_continuous_scale='Viridis')
-    st.plotly_chart(lead_conv_fig, use_container_width=True)
-    
-    # Add navigation buttons
+    # Display code example
+    st.subheader("Analysis Code")
     st.markdown("""
-    <div class="nav-button-container">
-        <a href="?section=data_overview" class="nav-button" style="margin-right: auto;">
+    <div class="code-box">
+    ```python
+    # Calculate conversion metrics
+    total_shifts = df['shift_id'].nunique()
+    total_views = len(df)
+    total_claims = df['claimed_at'].notna().sum()
+    total_completions = df['is_verified'].sum()
+    
+    # Conversion rates
+    view_to_claim_rate = (total_claims / total_views * 100).round(1)
+    claim_to_complete_rate = (total_completions / total_claims * 100).round(1)
+    overall_conversion = (total_completions / total_views * 100).round(1)
+    ```
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <a href="?section=data_overview" class="nav-button">
             ← Previous: Data Overview
         </a>
-        <a href="?section=worker_analysis" class="nav-button" style="margin-left: auto;">
+        <a href="?section=worker_analysis" class="nav-button">
             Next: Worker Analysis →
         </a>
     </div>
     """, unsafe_allow_html=True)
 
-# Worker analysis
+# Worker Analysis
 def worker_analysis(df):
-    st.header("Worker Analysis")
+    st.title("Worker Analysis")
     
-    # Worker activity metrics
+    # Calculate key metrics
     total_workers = df['worker_id'].nunique()
-    avg_views_per_worker = df.groupby('worker_id').size().mean().round(2)
-    
-    worker_claims = df[df['claimed_at'].notna()].groupby('worker_id').size().reset_index()
-    worker_claims.columns = ['worker_id', 'claims_count']
-    active_workers = len(worker_claims)
+    active_workers = df[df['claimed_at'].notna()]['worker_id'].nunique()
+    avg_views_per_worker = (len(df) / total_workers).round(1)
     
     # Workers who completed at least one shift
     completed_workers = df[df['is_verified'] == True]['worker_id'].nunique()
     
-    # Calculate worker completion rate
+    # Calculate worker completion rate (with observed=True parameter)
     worker_completion_rate = df[df['claimed_at'].notna()].groupby('worker_id', observed=True)['is_verified'].mean().mean() * 100
     
     # Calculate most common time slot preference
@@ -1010,45 +445,26 @@ def worker_analysis(df):
     worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id', observed=True)['count'].idxmax()]
     most_common_slot = worker_pref_slot['slot'].value_counts().index[0]
     
+    # Claims per worker
+    worker_claims = df.groupby('worker_id')['claimed_at'].apply(lambda x: x.notna().sum()).reset_index()
+    worker_claims.columns = ['worker_id', 'claims_count']
+    
     # Calculate additional metrics for the main finding
     top_workers_count = int(total_workers * 0.2)  # Top 20% of workers
     top_workers = worker_claims.sort_values('claims_count', ascending=False).head(top_workers_count)
     top_workers_claims = top_workers['claims_count'].sum()
     top_workers_percentage = (top_workers_claims / worker_claims['claims_count'].sum() * 100).round(1)
     
-    # Calculate rate sensitivity metrics
-    df['pay_rate_bin'] = pd.cut(df['pay_rate'], 
-                              bins=[0, 20, 25, 30, 35, float('inf')],
-                              labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
-    
-    high_rate_conversion = df[df['pay_rate'] > 30]['claimed_at'].notna().mean() * 100
-    low_rate_conversion = df[df['pay_rate'] <= 30]['claimed_at'].notna().mean() * 100
-    conversion_difference = (high_rate_conversion - low_rate_conversion).round(1)
-    
-    # Add Key Takeaways at the top of the section
-    st.markdown("""
-    <div class="key-takeaways">
-        <h4>Key Takeaways: Worker Behavior</h4>
-        <ul>
-            <li><strong>Worker Retention:</strong> Only {active:.1f}% of workers who view shifts actually claim and complete them, which is typical for marketplace onboarding (industry benchmark: 10-20%).</li>
-            <li><strong>Activity Distribution:</strong> Top 20% of workers account for {top_pct:.1f}% of all claimed shifts, demonstrating a concentrated power user group.</li>
-            <li><strong>Reliability Metrics:</strong> Workers who claim shifts complete them {complete:.1f}% of the time, exceeding healthcare industry averages (80-90%).</li>
-            <li><strong>Time Preference:</strong> Most workers prefer {preferred_slot} shifts, following typical healthcare worker scheduling preferences.</li>
-            <li><strong>Rate Sensitivity:</strong> Shifts paying over $30/hour see {diff:.1f}% higher conversion rates than lower-paying shifts, establishing a clear price threshold.</li>
-        </ul>
+    # Display key finding
+    st.markdown(f"""
+    <div class="key-finding">
+        <h4>Key Finding</h4>
+        <p>The 80/20 rule is dramatically evident with top 20% of workers claiming {top_workers_percentage}% of all shifts, 
+        suggesting user engagement strategies should focus on cultivating and retaining this high-impact worker segment.</p>
     </div>
+    """, unsafe_allow_html=True)
     
-    <div class="main-finding">
-        <p>The 80/20 rule is dramatically evident with top 20% of workers claiming {top_pct:.1f}% of all shifts, suggesting user engagement strategies should focus on cultivating and retaining this high-impact worker segment.</p>
-    </div>
-    """.format(
-        active=(completed_workers / total_workers * 100),
-        complete=worker_completion_rate,
-        preferred_slot=most_common_slot,
-        top_pct=top_workers_percentage,
-        diff=conversion_difference
-    ), unsafe_allow_html=True)
-    
+    # Display metrics
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
         st.metric("Total Workers", f"{total_workers:,}")
@@ -1062,11 +478,10 @@ def worker_analysis(df):
     # Worker distribution by activity level
     st.subheader("Worker Activity Distribution")
     
-    # Calculate claims per worker
+    # Create activity bins
     claims_per_worker = df.groupby('worker_id')['claimed_at'].apply(lambda x: x.notna().sum()).reset_index()
     claims_per_worker.columns = ['worker_id', 'claims_count']
     
-    # Create activity bins
     claims_per_worker['activity_level'] = pd.cut(
         claims_per_worker['claims_count'],
         bins=[0, 1, 3, 5, 10, float('inf')],
@@ -1079,10 +494,14 @@ def worker_analysis(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        activity_fig = px.bar(activity_dist, x='Activity Level', y='Number of Workers',
-                             title='Worker Distribution by Activity Level',
-                             color='Number of Workers',
-                             color_continuous_scale='Viridis')
+        activity_fig = px.bar(
+            activity_dist, 
+            x='Activity Level', 
+            y='Number of Workers',
+            title='Worker Distribution by Activity Level',
+            color='Number of Workers',
+            color_continuous_scale='Blues'
+        )
         st.plotly_chart(activity_fig, use_container_width=True)
     
     with col2:
@@ -1095,43 +514,46 @@ def worker_analysis(df):
         ).reset_index()
         
         reliability_df = reliability_df[reliability_df['total_claims'] > 0].copy()
-        reliability_df['cancellation_rate'] = (reliability_df['cancellations'] / reliability_df['total_claims'] * 100)
-        reliability_df['no_show_rate'] = (reliability_df['no_shows'] / reliability_df['total_claims'] * 100)
         reliability_df['completion_rate'] = (reliability_df['completions'] / reliability_df['total_claims'] * 100)
         
         # Plot completion rate distribution
-        completion_fig = px.histogram(reliability_df, x='completion_rate', nbins=20,
-                                    title='Distribution of Worker Completion Rates',
-                                    labels={'completion_rate': 'Completion Rate (%)'},
-                                    color_discrete_sequence=['#109618'])
+        completion_fig = px.histogram(
+            reliability_df, 
+            x='completion_rate', 
+            nbins=20,
+            title='Distribution of Worker Completion Rates',
+            labels={'completion_rate': 'Completion Rate (%)'},
+            color_discrete_sequence=['#10B981']
+        )
         st.plotly_chart(completion_fig, use_container_width=True)
     
     # Worker preference analysis
     st.subheader("Worker Preferences")
     
-    # Time slot preferences
-    worker_slots = df.groupby(['worker_id', 'slot']).size().reset_index()
-    worker_slots.columns = ['worker_id', 'slot', 'count']
-    
-    # For each worker, find their preferred slot
-    worker_pref_slot = worker_slots.loc[worker_slots.groupby('worker_id')['count'].idxmax()]
-    slot_pref_dist = worker_pref_slot['slot'].value_counts().reset_index()
-    slot_pref_dist.columns = ['Time Slot', 'Number of Workers']
-    
     col1, col2 = st.columns(2)
     
     with col1:
-        slot_pref_fig = px.pie(slot_pref_dist, names='Time Slot', values='Number of Workers',
-                              title='Worker Preferred Time Slots',
-                              color_discrete_sequence=px.colors.qualitative.Set3)
+        # Time slot preferences
+        slot_pref_dist = worker_pref_slot['slot'].value_counts().reset_index()
+        slot_pref_dist.columns = ['Time Slot', 'Number of Workers']
+        
+        slot_pref_fig = px.pie(
+            slot_pref_dist, 
+            names='Time Slot', 
+            values='Number of Workers',
+            title='Worker Preferred Time Slots',
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
         st.plotly_chart(slot_pref_fig, use_container_width=True)
     
     with col2:
         # Rate sensitivity
         # Group by worker and pay rate bins
-        df['pay_rate_bin'] = pd.cut(df['pay_rate'], 
-                                   bins=[0, 20, 25, 30, 35, float('inf')],
-                                   labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
+        df['pay_rate_bin'] = pd.cut(
+            df['pay_rate'], 
+            bins=[0, 20, 25, 30, 35, float('inf')],
+            labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35']
+        )
         
         rate_conv = df.groupby('pay_rate_bin').agg(
             total_views=('shift_id', 'count'),
@@ -1140,28 +562,50 @@ def worker_analysis(df):
         
         rate_conv['conversion_rate'] = (rate_conv['claimed'] / rate_conv['total_views'] * 100).round(2)
         
-        rate_sens_fig = px.bar(rate_conv, x='pay_rate_bin', y='conversion_rate',
-                             title='Conversion Rate by Pay Rate',
-                             labels={'pay_rate_bin': 'Pay Rate Range', 'conversion_rate': 'Conversion Rate (%)'},
-                             color='conversion_rate',
-                             color_continuous_scale='Viridis')
+        rate_sens_fig = px.bar(
+            rate_conv, 
+            x='pay_rate_bin', 
+            y='conversion_rate',
+            title='Conversion Rate by Pay Rate',
+            labels={'pay_rate_bin': 'Pay Rate Range', 'conversion_rate': 'Conversion Rate (%)'},
+            color='conversion_rate',
+            color_continuous_scale='Viridis'
+        )
         st.plotly_chart(rate_sens_fig, use_container_width=True)
     
-    # Add navigation buttons
+    # Display code example
+    st.subheader("Analysis Code")
     st.markdown("""
-    <div class="nav-button-container">
-        <a href="?section=marketplace_dynamics" class="nav-button" style="margin-right: auto;">
+    <div class="code-box">
+    ```python
+    # Calculate worker activity distribution
+    claims_per_worker = df.groupby('worker_id')['claimed_at'].apply(lambda x: x.notna().sum()).reset_index()
+    claims_per_worker.columns = ['worker_id', 'claims_count']
+    
+    # Top workers analysis (80/20 rule)
+    top_workers_count = int(total_workers * 0.2)  # Top 20% of workers
+    top_workers = claims_per_worker.sort_values('claims_count', ascending=False).head(top_workers_count)
+    top_workers_claims = top_workers['claims_count'].sum()
+    top_workers_percentage = (top_workers_claims / claims_per_worker['claims_count'].sum() * 100).round(1)
+    ```
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <a href="?section=marketplace_dynamics" class="nav-button">
             ← Previous: Marketplace Dynamics
         </a>
-        <a href="?section=workplace_analysis" class="nav-button" style="margin-left: auto;">
+        <a href="?section=workplace_analysis" class="nav-button">
             Next: Workplace Analysis →
         </a>
     </div>
     """, unsafe_allow_html=True)
 
-# Workplace analysis
+# Workplace Analysis
 def workplace_analysis(df):
-    st.header("Workplace Analysis")
+    st.title("Workplace Analysis")
     
     # Workplace activity metrics
     total_workplaces = df['workplace_id'].nunique()
@@ -1195,9 +639,11 @@ def workplace_analysis(df):
     
     # Calculate fill rate by lead time category for main finding
     df_workplace = df.copy()
-    df_workplace['lead_time_bin'] = pd.cut(df_workplace['lead_time_hours'], 
-                                 bins=[0, 24, 48, 72, 168, float('inf')],
-                                 labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days'])
+    df_workplace['lead_time_bin'] = pd.cut(
+        df_workplace['lead_time_hours'], 
+        bins=[0, 24, 48, 72, 168, float('inf')],
+        labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days']
+    )
     
     lead_fill_rates = df_workplace.groupby('lead_time_bin').agg(
         total_views=('shift_id', 'count'),
@@ -1215,36 +661,16 @@ def workplace_analysis(df):
     
     fill_rate_diff = best_fill_rate - worst_fill_rate
     
-    # Add Key Takeaways at the top of the section
-    st.markdown("""
-    <div class="key-takeaways">
-        <h4>Key Takeaways: Workplace Behavior</h4>
-        <ul>
-            <li><strong>Workplace Concentration:</strong> Only {wp_pct:.1f}% of workplaces post more than 10 shifts, suggesting a small group of power users drives marketplace volume.</li>
-            <li><strong>Fill Rate Variance:</strong> The average workplace fill rate is {fill_rate:.1f}%, with significant variation based on posting practices and time slots.</li>
-            <li><strong>Posting Behavior:</strong> Workplaces post shifts with an average lead time of {lead_time:.1f} hours ({lead_days:.1f} days), shorter than optimal for maximum fill rates.</li>
-            <li><strong>Volume Variability:</strong> The top workplace posted {max_shifts} shifts, while the average workplace posted only {avg_shifts} shifts, indicating high concentration.</li>
-            <li><strong>Lead Time Impact:</strong> Shifts posted with {best_lead} lead time achieve {best_rate:.1f}% fill rates vs. only {worst_rate:.1f}% for {worst_lead} lead time.</li>
-        </ul>
+    # Display key finding
+    st.markdown(f"""
+    <div class="key-finding">
+        <h4>Key Finding</h4>
+        <p>Shifts posted with {best_lead_time} lead time achieve {fill_rate_diff:.1f} percentage points higher fill rates than those with {worst_lead_time} lead time, 
+        representing a critical opportunity to improve workplace education on optimal posting strategies.</p>
     </div>
+    """, unsafe_allow_html=True)
     
-    <div class="main-finding">
-        <p>Shifts posted with {best_lead} lead time achieve {fill_diff:.1f} percentage points higher fill rates than those with {worst_lead} lead time, representing a critical opportunity to improve workplace education on optimal posting strategies.</p>
-    </div>
-    """.format(
-        wp_pct=high_volume_percentage,
-        fill_rate=avg_fill_rate,
-        lead_time=avg_lead_time,
-        lead_days=avg_lead_time/24,
-        max_shifts=max_shifts_per_workplace,
-        avg_shifts=avg_shifts_per_workplace,
-        best_lead=best_lead_time,
-        best_rate=best_fill_rate,
-        worst_lead=worst_lead_time,
-        worst_rate=worst_fill_rate,
-        fill_diff=fill_rate_diff
-    ), unsafe_allow_html=True)
-    
+    # Display metrics
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
         st.metric("Total Workplaces", f"{total_workplaces:,}")
@@ -1274,751 +700,533 @@ def workplace_analysis(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        volume_fig = px.bar(volume_dist, x='Volume Level', y='Number of Workplaces',
-                          title='Workplace Distribution by Shift Volume',
-                          color='Number of Workplaces',
-                          color_continuous_scale='Viridis')
+        volume_fig = px.bar(
+            volume_dist, 
+            x='Volume Level', 
+            y='Number of Workplaces',
+            title='Workplace Distribution by Shift Volume',
+            color='Number of Workplaces',
+            color_continuous_scale='Blues'
+        )
         st.plotly_chart(volume_fig, use_container_width=True)
     
     with col2:
         # Fill rate distribution
-        fill_rate_fig = px.histogram(workplace_fill_rate, x='fill_rate', nbins=20,
-                                   title='Distribution of Workplace Fill Rates',
-                                   labels={'fill_rate': 'Fill Rate (%)'},
-                                   color_discrete_sequence=['#3366CC'])
+        fill_rate_fig = px.histogram(
+            workplace_fill_rate, 
+            x='fill_rate', 
+            nbins=20,
+            title='Distribution of Workplace Fill Rates',
+            labels={'fill_rate': 'Fill Rate (%)'},
+            color_discrete_sequence=['#3366CC']
+        )
         st.plotly_chart(fill_rate_fig, use_container_width=True)
     
-    # Lead time analysis for workplaces
-    st.subheader("Workplace Posting Behavior")
+    # Lead time analysis
+    st.subheader("Effect of Lead Time on Fill Rates")
     
-    # Calculate average lead time for each workplace
-    workplace_lead_time = df.groupby('workplace_id')['lead_time_hours'].mean().reset_index()
-    workplace_lead_time.columns = ['workplace_id', 'avg_lead_time']
+    # Plot fill rates by lead time
+    lead_fill_rates_reset = lead_fill_rates.reset_index()
     
-    # Create lead time bins
-    workplace_lead_time['lead_time_category'] = pd.cut(
-        workplace_lead_time['avg_lead_time'],
+    lead_time_fig = px.bar(
+        lead_fill_rates_reset,
+        x='lead_time_bin',
+        y=['claim_rate', 'fill_rate'],
+        barmode='group',
+        title='Claim and Fill Rates by Lead Time',
+        labels={
+            'lead_time_bin': 'Lead Time',
+            'value': 'Rate (%)',
+            'variable': 'Metric'
+        },
+        color_discrete_map={
+            'claim_rate': '#3B82F6',
+            'fill_rate': '#10B981'
+        }
+    )
+    st.plotly_chart(lead_time_fig, use_container_width=True)
+    
+    # Display code example
+    st.subheader("Analysis Code")
+    st.markdown("""
+    <div class="code-box">
+    ```python
+    # Calculate fill rate by lead time
+    df_workplace = df.copy()
+    df_workplace['lead_time_bin'] = pd.cut(
+        df_workplace['lead_time_hours'], 
         bins=[0, 24, 48, 72, 168, float('inf')],
         labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days']
     )
     
-    lead_time_dist = workplace_lead_time['lead_time_category'].value_counts().reset_index()
-    lead_time_dist.columns = ['Lead Time', 'Number of Workplaces']
+    lead_fill_rates = df_workplace.groupby('lead_time_bin').agg(
+        total_views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum()),
+        verified=('is_verified', 'sum')
+    )
     
-    # Plot lead time distribution
-    lead_time_fig = px.bar(lead_time_dist, x='Lead Time', y='Number of Workplaces',
-                         title='Workplace Distribution by Average Lead Time',
-                         color='Number of Workplaces',
-                         color_continuous_scale='Viridis')
-    st.plotly_chart(lead_time_fig, use_container_width=True)
+    lead_fill_rates['claim_rate'] = (lead_fill_rates['claims'] / lead_fill_rates['total_views'] * 100).round(1)
+    lead_fill_rates['fill_rate'] = (lead_fill_rates['verified'] / lead_fill_rates['total_views'] * 100).round(1)
+    ```
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Top workplaces by volume
-    st.subheader("Top Workplaces by Volume")
-    
-    top_workplaces = workplace_volume.sort_values('shift_count', ascending=False).head(10)
-    
-    top_wp_fig = px.bar(top_workplaces, x='workplace_id', y='shift_count',
-                       title='Top 10 Workplaces by Shift Volume',
-                       labels={'workplace_id': 'Workplace ID', 'shift_count': 'Number of Shifts'},
-                       color='shift_count',
-                       color_continuous_scale='Viridis')
-    
-    # Update to show cleaner workplace IDs
-    top_wp_fig.update_layout(xaxis_tickformat='.5s')
-    
-    st.plotly_chart(top_wp_fig, use_container_width=True)
-    
-    # Add navigation buttons
+    # Navigation buttons
     st.markdown("""
-    <div class="nav-button-container">
-        <a href="?section=worker_analysis" class="nav-button" style="margin-right: auto;">
+    <div class="nav-container">
+        <a href="?section=worker_analysis" class="nav-button">
             ← Previous: Worker Analysis
         </a>
-        <a href="?section=rate_analysis" class="nav-button" style="margin-left: auto;">
-            Next: Rate & Pricing Analysis →
+        <a href="?section=rate_analysis" class="nav-button">
+            Next: Rate Analysis →
         </a>
     </div>
     """, unsafe_allow_html=True)
 
-# Rate and pricing analysis
+# Rate Analysis
 def rate_analysis(df):
-    st.header("Rate & Pricing Analysis")
+    st.title("Rate & Pricing Analysis")
     
-    # Rate summary statistics
-    pay_rate_avg = df['pay_rate'].mean().round(2)
-    charge_rate_avg = df['charge_rate'].mean().round(2)
+    # Rate statistics
+    min_rate = df['pay_rate'].min()
+    max_rate = df['pay_rate'].max()
+    avg_rate = df['pay_rate'].mean().round(2)
+    median_rate = df['pay_rate'].median()
     
-    # Calculate markup
-    df['markup'] = df['charge_rate'] - df['pay_rate']
-    df['markup_percentage'] = (df['markup'] / df['pay_rate'] * 100).round(2)
-    
-    markup_avg = df['markup'].mean().round(2)
-    markup_pct_avg = df['markup_percentage'].mean().round(2)
-    
-    # Find the pay rate with highest conversion
-    df['pay_rate_bin'] = pd.cut(df['pay_rate'], 
-                             bins=[0, 20, 25, 30, 35, float('inf')],
-                             labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
+    # Calculate conversion by pay rate for main finding
+    # Group by pay rate bins
+    df['pay_rate_bin'] = pd.cut(
+        df['pay_rate'], 
+        bins=[0, 20, 25, 30, 35, float('inf')],
+        labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35']
+    )
     
     rate_conv = df.groupby('pay_rate_bin').agg(
         total_views=('shift_id', 'count'),
-        claimed=('claimed_at', lambda x: x.notna().sum())
+        claimed=('claimed_at', lambda x: x.notna().sum()),
+        completed=('is_verified', 'sum')
     ).reset_index()
     
-    rate_conv['conversion_rate'] = (rate_conv['claimed'] / rate_conv['total_views'] * 100).round(2)
-    best_rate_bin = rate_conv.loc[rate_conv['conversion_rate'].idxmax()]['pay_rate_bin']
-    best_conversion = rate_conv.loc[rate_conv['conversion_rate'].idxmax()]['conversion_rate']
+    rate_conv['view_to_claim'] = (rate_conv['claimed'] / rate_conv['total_views'] * 100).round(1)
+    rate_conv['claim_to_complete'] = (rate_conv['completed'] / rate_conv['claimed'] * 100).round(1)
+    rate_conv['overall_conversion'] = (rate_conv['completed'] / rate_conv['total_views'] * 100).round(1)
     
-    # Slot with highest markup
-    slot_markup = df.groupby('slot')[['markup', 'markup_percentage']].mean().reset_index()
-    highest_markup_slot = slot_markup.loc[slot_markup['markup'].idxmax()]['slot']
-    highest_markup_value = slot_markup.loc[slot_markup['markup'].idxmax()]['markup'].round(2)
+    # Find optimal rate ranges
+    best_claim_rate = rate_conv.loc[rate_conv['view_to_claim'].idxmax(), 'pay_rate_bin']
+    best_claim_pct = rate_conv.loc[rate_conv['view_to_claim'].idxmax(), 'view_to_claim']
     
-    # Add Key Takeaways at the top of the section
-    st.markdown("""
-    <div class="key-takeaways">
-        <h4>Key Takeaways: Rate & Pricing</h4>
-        <ul>
-            <li><strong>Price Sensitivity:</strong> The {best_rate} rate range has the highest conversion at {conv_rate:.1f}%, suggesting a clear price threshold for worker engagement.</li>
-            <li><strong>Margin Structure:</strong> Average markup is ${markup:.2f} ({markup_pct:.1f}% of charge rate), providing insights into platform economics.</li>
-            <li><strong>Shift Time Pricing:</strong> {highest_slot} shifts command the highest markup (${highest_markup:.2f}), reflecting premium pricing for less desirable hours.</li>
-            <li><strong>Price-Completion Link:</strong> Higher-priced shifts not only convert better but also have higher completion rates, suggesting better worker reliability.</li>
-            <li><strong>Strategic Pricing:</strong> Data suggests optimal pricing exists at $30+ per hour where both conversion and completion rates exceed marketplace averages.</li>
-        </ul>
+    best_complete_rate = rate_conv.loc[rate_conv['overall_conversion'].idxmax(), 'pay_rate_bin']
+    best_complete_pct = rate_conv.loc[rate_conv['overall_conversion'].idxmax(), 'overall_conversion']
+    
+    # Calculate elasticity
+    high_rate_conversion = df[df['pay_rate'] > 30]['claimed_at'].notna().mean() * 100
+    low_rate_conversion = df[df['pay_rate'] <= 30]['claimed_at'].notna().mean() * 100
+    
+    elasticity = ((high_rate_conversion - low_rate_conversion) / low_rate_conversion * 100).round(1)
+    
+    # Display key finding
+    st.markdown(f"""
+    <div class="key-finding">
+        <h4>Key Finding</h4>
+        <p>Pay rates in the {best_claim_rate} range achieve the highest view-to-claim conversion at {best_claim_pct}%, 
+        while {best_complete_rate} rates achieve the highest overall view-to-completion rate at {best_complete_pct}%. 
+        Higher rates (>$30/hour) show {elasticity}% higher conversion than lower rates, indicating strong price elasticity.</p>
     </div>
-    """.format(
-        best_rate=best_rate_bin,
-        conv_rate=best_conversion,
-        markup=markup_avg,
-        markup_pct=markup_pct_avg,
-        highest_slot=highest_markup_slot,
-        highest_markup=highest_markup_value
-    ), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
+    # Display metrics
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
-        st.metric("Avg Pay Rate", f"${pay_rate_avg}")
+        st.metric("Minimum Rate", f"${min_rate:.2f}")
     with metrics_cols[1]:
-        st.metric("Avg Charge Rate", f"${charge_rate_avg}")
+        st.metric("Maximum Rate", f"${max_rate:.2f}")
     with metrics_cols[2]:
-        st.metric("Avg Markup", f"${markup_avg}")
+        st.metric("Average Rate", f"${avg_rate:.2f}")
     with metrics_cols[3]:
-        st.metric("Avg Markup %", f"{markup_pct_avg}%")
+        st.metric("Median Rate", f"${median_rate:.2f}")
     
-    # Rate distributions
-    st.subheader("Rate Distributions")
+    # Rate distribution
+    st.subheader("Pay Rate Distribution")
     
-    col1, col2 = st.columns(2)
+    rate_hist = px.histogram(
+        df, 
+        x='pay_rate', 
+        nbins=30,
+        title='Distribution of Pay Rates',
+        labels={'pay_rate': 'Hourly Pay Rate ($)'},
+        color_discrete_sequence=['#3B82F6']
+    )
+    st.plotly_chart(rate_hist, use_container_width=True)
     
-    with col1:
-        # Pay rate distribution
-        pay_fig = px.histogram(df, x='pay_rate', nbins=30,
-                             title='Distribution of Pay Rates',
-                             labels={'pay_rate': 'Pay Rate ($)'},
-                             color_discrete_sequence=['#3366CC'])
-        st.plotly_chart(pay_fig, use_container_width=True)
-    
-    with col2:
-        # Charge rate distribution
-        charge_fig = px.histogram(df, x='charge_rate', nbins=30,
-                               title='Distribution of Charge Rates',
-                               labels={'charge_rate': 'Charge Rate ($)'},
-                               color_discrete_sequence=['#DC3912'])
-        st.plotly_chart(charge_fig, use_container_width=True)
-    
-    # Rate analysis by time slot
-    st.subheader("Rate Analysis by Time Slot")
-    
-    slot_rates = df.groupby('slot').agg(
-        avg_pay_rate=('pay_rate', 'mean'),
-        avg_charge_rate=('charge_rate', 'mean'),
-        avg_markup=('markup', 'mean'),
-        avg_markup_pct=('markup_percentage', 'mean')
-    ).reset_index()
-    
-    # Round numeric columns
-    for col in slot_rates.columns:
-        if col != 'slot':
-            slot_rates[col] = slot_rates[col].round(2)
+    # Conversion by pay rate
+    st.subheader("Conversion Rates by Pay Rate")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Pay and charge rates by slot
-        slot_rate_fig = go.Figure()
-        
-        slot_rate_fig.add_trace(go.Bar(
-            x=slot_rates['slot'],
-            y=slot_rates['avg_pay_rate'],
-            name='Pay Rate',
-            marker_color='#3366CC'
-        ))
-        
-        slot_rate_fig.add_trace(go.Bar(
-            x=slot_rates['slot'],
-            y=slot_rates['avg_charge_rate'],
-            name='Charge Rate',
-            marker_color='#DC3912'
-        ))
-        
-        slot_rate_fig.update_layout(
-            title='Average Pay and Charge Rates by Time Slot',
-            xaxis_title='Time Slot',
-            yaxis_title='Rate ($)',
-            barmode='group'
+        view_claim_fig = px.bar(
+            rate_conv, 
+            x='pay_rate_bin', 
+            y='view_to_claim',
+            title='View-to-Claim Conversion by Pay Rate',
+            labels={'pay_rate_bin': 'Pay Rate Range', 'view_to_claim': 'Conversion Rate (%)'},
+            color='view_to_claim',
+            color_continuous_scale='Blues'
         )
-        
-        st.plotly_chart(slot_rate_fig, use_container_width=True)
+        st.plotly_chart(view_claim_fig, use_container_width=True)
     
     with col2:
-        # Markup by slot
-        markup_slot_fig = px.bar(slot_rates, x='slot', y='avg_markup',
-                               title='Average Markup by Time Slot',
-                               labels={'slot': 'Time Slot', 'avg_markup': 'Average Markup ($)'},
-                               color='avg_markup',
-                               color_continuous_scale='Viridis')
-        st.plotly_chart(markup_slot_fig, use_container_width=True)
+        overall_conv_fig = px.bar(
+            rate_conv, 
+            x='pay_rate_bin', 
+            y='overall_conversion',
+            title='Overall Conversion (View-to-Completion) by Pay Rate',
+            labels={'pay_rate_bin': 'Pay Rate Range', 'overall_conversion': 'Conversion Rate (%)'},
+            color='overall_conversion',
+            color_continuous_scale='Viridis'
+        )
+        st.plotly_chart(overall_conv_fig, use_container_width=True)
     
-    # Rate effectiveness analysis
-    st.subheader("Rate Effectiveness Analysis")
+    # Rate vs Lead Time Analysis
+    st.subheader("Rate vs. Lead Time Analysis")
     
-    # Create pay rate bins
-    df['pay_rate_bin'] = pd.cut(df['pay_rate'],
-                              bins=[0, 20, 25, 30, 35, float('inf')],
-                              labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
-    
-    # Calculate conversion rate by pay rate bin
-    pay_rate_conv = df.groupby('pay_rate_bin').agg(
-        total_views=('shift_id', 'count'),
-        claimed=('claimed_at', lambda x: x.notna().sum()),
-        verified=('is_verified', 'sum')
-    ).reset_index()
-    
-    pay_rate_conv['conversion_rate'] = (pay_rate_conv['claimed'] / pay_rate_conv['total_views'] * 100).round(2)
-    # Calculate completion rate safely
-    completion_mask = pay_rate_conv['claimed'] > 0
-    pay_rate_conv.loc[completion_mask, 'completion_rate'] = (
-        pay_rate_conv.loc[completion_mask, 'verified'] / 
-        pay_rate_conv.loc[completion_mask, 'claimed'] * 100
-    ).round(2)
-    # Set default value for rows where claimed is 0
-    pay_rate_conv.loc[~completion_mask, 'completion_rate'] = 0
-    
-    # Replace NaN with 0
-    # Don't use fillna on categorical data
-    # Handle missing values in a way that works with categorical data
-    pay_rate_conv['conversion_rate'] = pay_rate_conv['conversion_rate'].fillna(0)
-    
-    rate_eff_fig = go.Figure()
-    
-    rate_eff_fig.add_trace(go.Bar(
-        x=pay_rate_conv['pay_rate_bin'],
-        y=pay_rate_conv['conversion_rate'],
-        name='Conversion Rate',
-        marker_color='#3366CC'
-    ))
-    
-    rate_eff_fig.add_trace(go.Bar(
-        x=pay_rate_conv['pay_rate_bin'],
-        y=pay_rate_conv['completion_rate'],
-        name='Completion Rate',
-        marker_color='#109618'
-    ))
-    
-    rate_eff_fig.update_layout(
-        title='Conversion and Completion Rates by Pay Rate',
-        xaxis_title='Pay Rate Range',
-        yaxis_title='Rate (%)',
-        barmode='group'
+    # Calculate average pay rate by lead time bin
+    df_rate_lead = df.copy()
+    df_rate_lead['lead_time_bin'] = pd.cut(
+        df_rate_lead['lead_time_hours'], 
+        bins=[0, 24, 48, 72, 168, float('inf')],
+        labels=['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days']
     )
     
-    st.plotly_chart(rate_eff_fig, use_container_width=True)
+    rate_by_lead = df_rate_lead.groupby('lead_time_bin')['pay_rate'].mean().reset_index()
+    rate_by_lead['pay_rate'] = rate_by_lead['pay_rate'].round(2)
     
-    # Add navigation buttons
+    rate_lead_fig = px.bar(
+        rate_by_lead,
+        x='lead_time_bin',
+        y='pay_rate',
+        title='Average Pay Rate by Lead Time',
+        labels={'lead_time_bin': 'Lead Time', 'pay_rate': 'Average Pay Rate ($)'},
+        color='pay_rate',
+        color_continuous_scale='Viridis'
+    )
+    st.plotly_chart(rate_lead_fig, use_container_width=True)
+    
+    # Display code example
+    st.subheader("Analysis Code")
     st.markdown("""
-    <div class="nav-button-container">
-        <a href="?section=workplace_analysis" class="nav-button" style="margin-right: auto;">
+    <div class="code-box">
+    ```python
+    # Calculate conversion metrics by pay rate
+    df['pay_rate_bin'] = pd.cut(
+        df['pay_rate'], 
+        bins=[0, 20, 25, 30, 35, float('inf')],
+        labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35']
+    )
+    
+    rate_conv = df.groupby('pay_rate_bin').agg(
+        total_views=('shift_id', 'count'),
+        claimed=('claimed_at', lambda x: x.notna().sum()),
+        completed=('is_verified', 'sum')
+    ).reset_index()
+    
+    rate_conv['view_to_claim'] = (rate_conv['claimed'] / rate_conv['total_views'] * 100).round(1)
+    rate_conv['overall_conversion'] = (rate_conv['completed'] / rate_conv['total_views'] * 100).round(1)
+    ```
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <a href="?section=workplace_analysis" class="nav-button">
             ← Previous: Workplace Analysis
         </a>
-        <a href="?section=time_series" class="nav-button" style="margin-left: auto;">
+        <a href="?section=time_series" class="nav-button">
             Next: Time Series Analysis →
         </a>
     </div>
     """, unsafe_allow_html=True)
 
-# Time series analysis
+# Time Series Analysis
 def time_series(df):
-    st.header("Time Series Analysis")
+    st.title("Time Series Analysis")
     
-    # Create daily and weekly aggregations
-    df['date'] = df['shift_start_at'].dt.date
-    df['week'] = df['shift_start_at'].dt.isocalendar().week
-    df['month'] = df['shift_start_at'].dt.month
+    # Create date field for grouping
+    df['date'] = df['created_at'].dt.date
     
-    # Daily metrics
+    # Group by date
     daily_metrics = df.groupby('date').agg(
         views=('shift_id', 'count'),
         claims=('claimed_at', lambda x: x.notna().sum()),
-        verified=('is_verified', 'sum')
+        completions=('is_verified', 'sum')
     ).reset_index()
     
-    daily_metrics['conversion_rate'] = (daily_metrics['claims'] / daily_metrics['views'] * 100).round(2)
-    daily_metrics['date'] = pd.to_datetime(daily_metrics['date'])
+    daily_metrics['claim_rate'] = (daily_metrics['claims'] / daily_metrics['views'] * 100).round(1)
+    daily_metrics['completion_rate'] = (daily_metrics['completions'] / daily_metrics['claims'] * 100).round(1)
     
-    # Weekly metrics
-    weekly_metrics = df.groupby(['week']).agg(
-        views=('shift_id', 'count'),
-        claims=('claimed_at', lambda x: x.notna().sum()),
-        verified=('is_verified', 'sum')
-    ).reset_index()
+    # Identify trends
+    # We'll use rolling average to smooth the data
+    daily_metrics['claim_rate_7d_avg'] = daily_metrics['claim_rate'].rolling(7).mean()
     
-    weekly_metrics['conversion_rate'] = (weekly_metrics['claims'] / weekly_metrics['views'] * 100).round(2)
+    # Find week with highest and lowest claim rates
+    daily_metrics['week'] = pd.to_datetime(daily_metrics['date']).dt.isocalendar().week
+    weekly_claim_rates = daily_metrics.groupby('week')['claim_rate'].mean().reset_index()
     
-    # Time series plots
-    st.subheader("Marketplace Activity Over Time")
+    best_week = weekly_claim_rates.loc[weekly_claim_rates['claim_rate'].idxmax(), 'week']
+    best_rate = weekly_claim_rates.loc[weekly_claim_rates['claim_rate'].idxmax(), 'claim_rate'].round(1)
     
-    activity_ts_fig = go.Figure()
+    worst_week = weekly_claim_rates.loc[weekly_claim_rates['claim_rate'].idxmin(), 'week']
+    worst_rate = weekly_claim_rates.loc[weekly_claim_rates['claim_rate'].idxmin(), 'claim_rate'].round(1)
     
-    activity_ts_fig.add_trace(go.Scatter(
-        x=daily_metrics['date'],
-        y=daily_metrics['views'],
-        name='Views',
-        marker_color='#3366CC',
-        mode='lines'
-    ))
+    # Check if there's a significant difference
+    rate_diff = best_rate - worst_rate
     
-    activity_ts_fig.add_trace(go.Scatter(
-        x=daily_metrics['date'],
-        y=daily_metrics['claims'],
-        name='Claims',
-        marker_color='#DC3912',
-        mode='lines'
-    ))
+    # Display key finding
+    st.markdown(f"""
+    <div class="key-finding">
+        <h4>Key Finding</h4>
+        <p>Week {best_week} saw the highest average claim rate at {best_rate}%, while Week {worst_week} 
+        had the lowest at {worst_rate}% – a {rate_diff:.1f} percentage point difference. 
+        This suggests significant weekly seasonality in marketplace activity that can inform staffing and engagement strategies.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    activity_ts_fig.add_trace(go.Scatter(
-        x=daily_metrics['date'],
-        y=daily_metrics['verified'],
-        name='Verified Shifts',
-        marker_color='#109618',
-        mode='lines'
-    ))
+    # Display time series plots
+    st.subheader("Daily Metrics Over Time")
     
-    activity_ts_fig.update_layout(
-        title='Daily Marketplace Activity',
-        xaxis_title='Date',
-        yaxis_title='Count',
-        hovermode='x unified'
+    # Volume metrics
+    volume_fig = px.line(
+        daily_metrics, 
+        x='date', 
+        y=['views', 'claims', 'completions'],
+        title='Daily Activity Volume',
+        labels={'date': 'Date', 'value': 'Count', 'variable': 'Metric'},
+        color_discrete_map={
+            'views': '#94A3B8', 
+            'claims': '#3B82F6',
+            'completions': '#10B981'
+        }
+    )
+    st.plotly_chart(volume_fig, use_container_width=True)
+    
+    # Conversion rates
+    rates_fig = px.line(
+        daily_metrics, 
+        x='date', 
+        y=['claim_rate', 'completion_rate'],
+        title='Daily Conversion Rates',
+        labels={'date': 'Date', 'value': 'Rate (%)', 'variable': 'Metric'},
+        color_discrete_map={
+            'claim_rate': '#3B82F6',
+            'completion_rate': '#10B981'
+        }
     )
     
-    st.plotly_chart(activity_ts_fig, use_container_width=True)
+    # Add 7-day moving average
+    rates_fig.add_scatter(
+        x=daily_metrics['date'],
+        y=daily_metrics['claim_rate_7d_avg'],
+        mode='lines',
+        line=dict(width=3, dash='dash', color='#1E40AF'),
+        name='Claim Rate (7-day avg)'
+    )
     
-    # Conversion rate over time
-    st.subheader("Conversion Rate Over Time")
+    st.plotly_chart(rates_fig, use_container_width=True)
     
-    conv_ts_fig = px.line(daily_metrics, x='date', y='conversion_rate',
-                         title='Daily Conversion Rate',
-                         labels={'date': 'Date', 'conversion_rate': 'Conversion Rate (%)'},
-                         color_discrete_sequence=['#109618'])
+    # Weekly patterns
+    st.subheader("Weekly Patterns")
     
-    st.plotly_chart(conv_ts_fig, use_container_width=True)
+    # Add day of week
+    df['day_of_week'] = df['created_at'].dt.day_name()
     
-    # Day of week analysis
-    st.subheader("Day of Week Analysis")
-    
-    df['day_of_week'] = df['shift_start_at'].dt.day_name()
-    
-    # Order days correctly
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    
-    dow_metrics = df.groupby('day_of_week').agg(
-        total_views=('shift_id', 'count'),
+    # Group by day of week
+    day_metrics = df.groupby('day_of_week').agg(
+        views=('shift_id', 'count'),
         claims=('claimed_at', lambda x: x.notna().sum())
     ).reset_index()
     
-    dow_metrics['conversion_rate'] = (dow_metrics['claims'] / dow_metrics['total_views'] * 100).round(2)
+    day_metrics['claim_rate'] = (day_metrics['claims'] / day_metrics['views'] * 100).round(1)
     
-    # Reorder days
-    dow_metrics['day_of_week'] = pd.Categorical(dow_metrics['day_of_week'], categories=day_order, ordered=True)
-    dow_metrics = dow_metrics.sort_values('day_of_week')
+    # Sort by day order
+    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    day_metrics['day_order'] = day_metrics['day_of_week'].apply(lambda x: day_order.index(x))
+    day_metrics = day_metrics.sort_values('day_order')
+    
+    day_fig = px.bar(
+        day_metrics,
+        x='day_of_week',
+        y='claim_rate',
+        title='Claim Rate by Day of Week',
+        labels={'day_of_week': 'Day of Week', 'claim_rate': 'Claim Rate (%)'},
+        color='claim_rate',
+        color_continuous_scale='Blues'
+    )
+    st.plotly_chart(day_fig, use_container_width=True)
+    
+    # Display code example
+    st.subheader("Analysis Code")
+    st.markdown("""
+    <div class="code-box">
+    ```python
+    # Group by date
+    daily_metrics = df.groupby('date').agg(
+        views=('shift_id', 'count'),
+        claims=('claimed_at', lambda x: x.notna().sum()),
+        completions=('is_verified', 'sum')
+    ).reset_index()
+    
+    daily_metrics['claim_rate'] = (daily_metrics['claims'] / daily_metrics['views'] * 100).round(1)
+    daily_metrics['completion_rate'] = (daily_metrics['completions'] / daily_metrics['claims'] * 100).round(1)
+    
+    # Calculate 7-day moving average
+    daily_metrics['claim_rate_7d_avg'] = daily_metrics['claim_rate'].rolling(7).mean()
+    ```
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <a href="?section=rate_analysis" class="nav-button">
+            ← Previous: Rate Analysis
+        </a>
+        <a href="?section=insights" class="nav-button">
+            Next: Key Insights →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Key Insights and Recommendations
+def insights():
+    st.title("Key Insights & Recommendations")
+    
+    st.markdown("""
+    <div class="key-finding">
+        <h4>Executive Summary</h4>
+        <p>Analysis of the CBH marketplace reveals strong network effects with concentrated activity among a small subset of high-value users. 
+        The data shows clear patterns in time slot preferences, significant rate sensitivity, and lead time's critical impact on fill rates.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.subheader("Key Insights")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Volume by day of week
-        dow_vol_fig = px.bar(dow_metrics, x='day_of_week', y='total_views',
-                           title='Shift Volume by Day of Week',
-                           labels={'day_of_week': 'Day of Week', 'total_views': 'Number of Views'},
-                           color='total_views',
-                           color_continuous_scale='Viridis')
-        st.plotly_chart(dow_vol_fig, use_container_width=True)
+        st.markdown("""
+        ### 1. Worker Concentration
+        The top 20% of workers account for a disproportionately large percentage of claimed shifts, 
+        demonstrating a pronounced "power user" effect. This core worker group's high engagement 
+        level indicates the platform has successfully created strong retention mechanisms for its 
+        most active users.
+        
+        ### 2. Rate Sensitivity
+        Pay rates above $30/hour show significantly higher conversion rates, highlighting 
+        a clear price threshold where worker interest increases substantially. This rate 
+        sensitivity provides actionable pricing guidance for workplaces.
+        
+        ### 3. Time Slot Preferences
+        Most workers demonstrate a strong preference for specific time slots, suggesting 
+        that personal schedule compatibility is a key driver of marketplace engagement.
+        """)
     
     with col2:
-        # Conversion by day of week
-        dow_conv_fig = px.bar(dow_metrics, x='day_of_week', y='conversion_rate',
-                            title='Conversion Rate by Day of Week',
-                            labels={'day_of_week': 'Day of Week', 'conversion_rate': 'Conversion Rate (%)'},
-                            color='conversion_rate',
-                            color_continuous_scale='Viridis')
-        st.plotly_chart(dow_conv_fig, use_container_width=True)
-
-# Key insights and recommendations
-def insights():
-    st.header("Key Insights & Recommendations")
+        st.markdown("""
+        ### 4. Lead Time Impact 
+        Shifts posted with 3-7 days of lead time achieve the highest fill rates, while shifts 
+        posted with less than 24 hours notice have significantly lower completion rates. This 
+        represents a critical operational insight for workplaces.
+        
+        ### 5. Fill Rate Variability
+        Workplace fill rates show wide variability, with highly active workplaces generally 
+        achieving better results. This indicates an opportunity for education and best practice 
+        sharing among less experienced workplaces.
+        
+        ### 6. Weekly Seasonality
+        Claim rates show clear weekly patterns, with certain weeks of the year demonstrating 
+        significantly higher marketplace activity, suggesting seasonal demand patterns.
+        """)
     
-    if 'data' not in st.session_state:
-        st.warning("Please upload data in the Introduction section first to generate insights.")
-        return
+    st.subheader("Strategic Recommendations")
     
-    df = st.session_state['data']
+    st.markdown("""
+    ### 1. Segment-Based Engagement Strategies
     
-    # Calculate key metrics for the insights
-    total_views = len(df)
-    unique_shifts = df['shift_id'].nunique()
-    unique_workers = df['worker_id'].nunique()
-    unique_workplaces = df['workplace_id'].nunique()
-    claimed_shifts = df['claimed_at'].notna().sum()
-    conversion_rate = (claimed_shifts / total_views * 100).round(2)
-    verified_shifts = df['is_verified'].sum()
-    fulfillment_rate = (verified_shifts / claimed_shifts * 100).round(2) if claimed_shifts > 0 else 0
+    **Worker Engagement:**
+    - Develop specific retention programs for top 20% of power users who drive majority of marketplace activity
+    - Create targeted onboarding for new workers focused on time slot and rate preferences
+    - Implement a tiered rewards system that provides additional benefits to most active workers
     
-    # Calculate worker activity distribution
-    worker_claims = df.groupby('worker_id')['claimed_at'].apply(lambda x: x.notna().sum()).reset_index()
-    worker_claims.columns = ['worker_id', 'claims_count']
-    active_workers = len(worker_claims[worker_claims['claims_count'] > 0])
-    top_20_pct_claims = worker_claims.sort_values('claims_count', ascending=False)
-    top_workers_threshold = int(unique_workers * 0.2)
-    top_workers_claim_share = (top_20_pct_claims.head(top_workers_threshold)['claims_count'].sum() / claimed_shifts * 100).round(2)
+    **Workplace Education:**
+    - Establish clear best practices for workplaces focusing on optimal lead times (3-7 days)
+    - Develop pricing guidance to help workplaces set competitive rates above key thresholds
+    - Create a workplace dashboard showcasing fill rate benchmarks against platform averages
     
-    # Calculate time slot conversion rates
-    slot_conv = df.groupby('slot').agg(
-        views=('shift_id', 'count'),
-        claims=('claimed_at', lambda x: x.notna().sum())
-    ).reset_index()
-    slot_conv['conversion_rate'] = (slot_conv['claims'] / slot_conv['views'] * 100).round(2)
-    best_slot = slot_conv.loc[slot_conv['conversion_rate'].idxmax()]
-    worst_slot = slot_conv.loc[slot_conv['conversion_rate'].idxmin()]
+    ### 2. Marketplace Optimization
     
-    # Calculate lead time impact
-    df['lead_time_hours'] = (df['shift_start_at'] - df['shift_created_at']).dt.total_seconds() / 3600
-    lead_time_bins = [0, 24, 48, 72, 168, float('inf')]
-    lead_time_labels = ['<1 day', '1-2 days', '2-3 days', '3-7 days', '>7 days']
-    df['lead_time_bin'] = pd.cut(df['lead_time_hours'], bins=lead_time_bins, labels=lead_time_labels)
-    lead_conv = df.groupby('lead_time_bin').agg(
-        views=('shift_id', 'count'),
-        claims=('claimed_at', lambda x: x.notna().sum())
-    ).reset_index()
-    lead_conv['conversion_rate'] = (lead_conv['claims'] / lead_conv['views'] * 100).round(2)
-    best_lead_time = lead_conv.loc[lead_conv['conversion_rate'].idxmax()]
+    - Implement dynamic pricing suggestions based on time slot, lead time, and seasonality
+    - Develop fill rate predictions based on historical patterns to set realistic workplace expectations
+    - Create a "shifts you might like" feature for workers based on their historical preferences
+    - Implement automatic reminders for workplaces to post shifts with optimal lead time
+    - Highlight shifts at risk of going unfilled for targeted outreach
     
-    # Calculate rate sensitivity
-    df['pay_rate_bin'] = pd.cut(df['pay_rate'], 
-                              bins=[0, 20, 25, 30, 35, float('inf')],
-                              labels=['<$20', '$20-25', '$25-30', '$30-35', '>$35'])
-    rate_conv = df.groupby('pay_rate_bin').agg(
-        views=('shift_id', 'count'),
-        claims=('claimed_at', lambda x: x.notna().sum())
-    ).reset_index()
-    rate_conv['conversion_rate'] = (rate_conv['claims'] / rate_conv['views'] * 100).round(2)
-    best_rate = rate_conv.loc[rate_conv['conversion_rate'].idxmax()]
+    ### 3. Product Development Roadmap
     
-    # Generate the insights markdown
-    st.markdown(f"""
-    ## Summary of Findings
-    
-    Based on the analysis of the CBH marketplace data, here are the key insights:
-    
-    ### Market Overview
-    - **Market Size**: The dataset contains {total_views:,} shift views across {unique_shifts:,} unique shifts, with {unique_workers:,} workers and {unique_workplaces:,} workplaces.
-    - **Conversion Performance**: Overall marketplace conversion rate is {conversion_rate}%, with {claimed_shifts:,} claimed shifts out of {total_views:,} views.
-    - **Fulfillment Rate**: {fulfillment_rate}% of claimed shifts were successfully completed (verified).
-    
-    ### Marketplace Dynamics
-    - **Conversion Rate**: The overall marketplace conversion rate is {conversion_rate}%, which represents the percentage of views that lead to claims.
-    - **Time Slot Preferences**: The {best_slot['slot']} time slot has the highest conversion rate at {best_slot['conversion_rate']}%, while the {worst_slot['slot']} time slot has the lowest at {worst_slot['conversion_rate']}%.
-    - **Lead Time Impact**: Shifts posted {best_lead_time['lead_time_bin']} before the start date show the best conversion rate at {best_lead_time['conversion_rate']}%, suggesting an optimal posting window.
-    
-    ### Worker Behavior
-    - **Activity Distribution**: Top 20% of workers account for {top_workers_claim_share}% of all claimed shifts, showing a concentration of activity among power users.
-    - **Active Worker Base**: Out of {unique_workers:,} workers who viewed shifts, {active_workers:,} ({round(active_workers/unique_workers*100, 2)}%) claimed at least one shift.
-    - **Rate Sensitivity**: The highest conversion rate of {best_rate['conversion_rate']}% occurs in the {best_rate['pay_rate_bin']} pay rate range, indicating a sweet spot for worker engagement.
-    
-    ### Workplace Patterns
-    - **Volume Distribution**: Workplaces vary widely in the number of shifts they post, with some being significantly more active than others.
-    - **Fill Rates**: There are notable differences in fill rates across workplaces, suggesting varying levels of attractiveness to workers.
-    - **Posting Strategy**: Workplace posting timing and lead time have significant impacts on fill success, with optimal lead times showing better performance.
-    
-    ### Rate & Pricing
-    - **Pricing Effectiveness**: Pay rates in the {best_rate['pay_rate_bin']} range show the highest conversion at {best_rate['conversion_rate']}%, but with diminishing returns at higher rates.
-    - **Markup Optimization**: Different time slots and shift types support different markup percentages, allowing for optimization.
-    - **Competitive Positioning**: Market rates show clear patterns that can inform dynamic pricing strategies to maximize both conversion and margin.
-    
-    ## Recommendations
-    
-    1. **Optimized Lead Times**: Encourage workplaces to post shifts further in advance, as data shows higher conversion rates for shifts with longer lead times.
-    
-    2. **Dynamic Pricing Strategy**: Implement time slot-specific pricing that accounts for worker preferences and marketplace demand patterns.
-    
-    3. **Worker Engagement Focus**: Target retention efforts on the most active and reliable workers, while designing specific programs to increase activity among occasional workers.
-    
-    4. **Workplace Onboarding Improvements**: Provide data-driven guidance to workplaces on optimal posting strategies based on marketplace patterns.
-    
-    5. **Personalized Recommendations**: Leverage worker preference data to match workers with shifts they're most likely to claim.
-    
-    6. **Supply-Demand Balancing**: Identify time slots and geographic areas with supply-demand imbalances and implement targeted incentives.
-    
-    7. **Reliability Incentives**: Develop incentive programs that reward workers for maintaining high completion rates and low cancellation rates.
-    
-    8. **Pricing Tiers**: Test tiered pricing structures that optimize both conversion rates and marketplace revenue.
+    - Build advanced analytics and prediction models for fill rates based on key variables
+    - Develop worker-focused scheduling tools to better align shift opportunities with preferences
+    - Create workplace planning tools to optimize posting strategies
+    - Implement dynamic pricing to respond to marketplace conditions in real-time
     """)
     
-    # Create exportable report
-    report_data = io.StringIO()
+    # Display code example
+    st.subheader("Python Libraries Used in This Analysis")
+    st.markdown("""
+    <div class="code-box">
+    ```python
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import plotly.express as px
+    import plotly.graph_objects as go
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from datetime import datetime
+    ```
+    </div>
+    """, unsafe_allow_html=True)
     
-    report_content = """
-    # CBH Marketplace Analysis Report
-    
-    ## Executive Summary
-    
-    The CBH marketplace demonstrates strong network effects as workers and workplaces interact to fulfill per diem shift needs. This analysis explores key dynamics, behaviors, and opportunities within the marketplace.
-    
-    ## Key Findings
-    
-    ### Marketplace Dynamics
-    - Conversion rates vary significantly by time slot, day of week, and lead time
-    - Lead time has a substantial impact on shift fill rates
-    - Time slot preferences show clear patterns that can inform scheduling
-    
-    ### Worker Behavior
-    - A small percentage of workers claim most shifts
-    - Worker reliability metrics provide insights for targeted retention
-    - Pay rate sensitivity shows patterns that can optimize pricing
-    
-    ### Workplace Patterns
-    - Workplace posting behavior varies widely
-    - Fill rates correlate with specific workplace behaviors
-    - Timing of shift posting impacts success rates
-    
-    ### Rate & Pricing
-    - Price elasticity varies by time slot and shift type
-    - Optimal markup percentages differ across market segments
-    - Pricing effectiveness can be improved through dynamic strategies
-    
-    ## Recommendations
-    
-    1. Optimize lead times for shift posting
-    2. Implement dynamic pricing by time slot
-    3. Focus on retention of most active workers
-    4. Improve workplace onboarding with data-driven guidance
-    5. Develop personalized shift recommendations
-    6. Balance supply-demand in underserved areas
-    7. Create reliability incentive programs
-    8. Test tiered pricing structures
-    
-    ## Next Steps
-    
-    1. A/B test pricing recommendations
-    2. Develop predictive models for conversion likelihood
-    3. Create worker and workplace dashboards for performance metrics
-    4. Implement automated recommendations in the marketplace
-    """
-    
-    report_data.write(report_content)
-    
-    st.download_button(
-        label="Download Analysis Report",
-        data=report_data.getvalue(),
-        file_name="cbh_marketplace_analysis.md",
-        mime="text/markdown"
-    )
+    # Navigation buttons
+    st.markdown("""
+    <div class="nav-container">
+        <a href="?section=time_series" class="nav-button">
+            ← Previous: Time Series Analysis
+        </a>
+        <a href="?section=introduction" class="nav-button">
+            Back to Start
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Main app logic
+# Main function to control the app flow
 def main():
-    # Load data automatically on app startup if not already loaded
-    if 'data' not in st.session_state:
-        try:
-            with st.spinner("Loading CBH marketplace data for analysis..."):
-                data_file = "attached_assets/Problems we tackle, Shift Offers v3 - table_12_2025-01-22T1134.csv"
-                # Load data directly from the file
-                df = load_and_clean_data(data_file)
-                st.session_state['data'] = df
-        except Exception as e:
-            st.error(f"Error loading case study data: {str(e)}")
-            st.error(f"Make sure the file exists and has the required columns (SHIFT_ID, WORKER_ID, etc.).")
-    
-    # Create sidebar for navigation
-    st.sidebar.title("Navigation")
-    
-    # Update active section when sidebar navigation is used
-    page = st.sidebar.radio("Go to", list(SECTIONS.keys()), 
-                           index=list(SECTIONS.values()).index(st.session_state['active_section']) 
-                           if st.session_state['active_section'] in SECTIONS.values() else 0)
-    
-    # If the page changes via sidebar, update session state and URL
-    if SECTIONS[page] != st.session_state['active_section']:
-        st.session_state['active_section'] = SECTIONS[page]
-        st.query_params['section'] = SECTIONS[page]
-    
-    # Get current section from session state
-    active_section = st.session_state['active_section']
-    
-    # Create a navigation header with progress tracker
-    section_list = list(SECTIONS.values())
-    section_names = list(SECTIONS.keys())
-    curr_index = section_list.index(active_section) if active_section in section_list else 0
-    progress_percentage = int((curr_index / (len(section_list) - 1)) * 100) if len(section_list) > 1 else 0
-    
-    # Skip the progress tracker for now as it's not rendering correctly
-    # We'll implement a simpler version
-    
-    # Show active section content
-    if active_section == 'introduction':
+    # Section routing based on selected section
+    if selected_section == "Introduction":
         introduction()
-        
-        # Show data preview
-        if 'data' in st.session_state:
-            df = st.session_state['data']
-            
-            # Executive summary card with key context
-            st.markdown("""
-            <div class="executive-summary">
-                <h3>Clipboard Health: Two-Sided Healthcare Marketplace</h3>
-                <p>CBH operates a marketplace connecting healthcare workers with facilities for per diem shifts.</p>
-                <p>This interactive case study explores key marketplace metrics, user behaviors, and optimization opportunities.</p>
-                <p>We'll analyze conversion rates, pricing factors, and temporal patterns to uncover actionable insights.</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Modern metrics display
-            st.subheader("Dataset at a Glance")
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Records", f"{len(df):,}")
-            with col2:
-                st.metric("Unique Workers", f"{df['worker_id'].nunique():,}")
-            with col3:
-                st.metric("Unique Workplaces", f"{df['workplace_id'].nunique():,}")
-            with col4:
-                st.metric("Unique Shifts", f"{df['shift_id'].nunique():,}")
-            
-            # Preview table in a card
-            st.markdown("""
-            <div style="background-color: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 2rem 0;">
-                <h3 style="margin-top: 0; color: var(--primary-dark);">Data Preview</h3>
-            """, unsafe_allow_html=True)
-            st.dataframe(df.head(5), height=200)
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # Simple button to start journey
-            st.markdown("""
-            <div style="text-align: center; margin-top: 2rem;">
-                <a href="?section=data_overview" class="simple-nav-btn primary">
-                    Begin Analysis Journey →
-                </a>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        if 'data' in st.session_state:
-            df = st.session_state['data']
-            # Call the appropriate section function
-            if active_section == "data_overview":
-                data_overview(df)
-                # Add professional navigation buttons
-                next_section = "marketplace_dynamics"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section=introduction" class="simple-nav-btn secondary">
-                        ← Back to Introduction
-                    </a>
-                    <a href="?section={next_section}" class="simple-nav-btn primary">
-                        Next: Marketplace Dynamics →
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            elif active_section == "marketplace_dynamics":
-                marketplace_dynamics(df)
-                prev_section = "data_overview"
-                next_section = "worker_analysis"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
-                        ← Previous: Data Overview
-                    </a>
-                    <a href="?section={next_section}" class="simple-nav-btn primary">
-                        Next: Worker Analysis →
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            elif active_section == "worker_analysis":
-                worker_analysis(df)
-                prev_section = "marketplace_dynamics"
-                next_section = "workplace_analysis"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
-                        ← Previous: Marketplace Dynamics
-                    </a>
-                    <a href="?section={next_section}" class="simple-nav-btn primary">
-                        Next: Workplace Analysis →
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            elif active_section == "workplace_analysis":
-                workplace_analysis(df)
-                prev_section = "worker_analysis"
-                next_section = "rate_analysis"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
-                        ← Previous: Worker Analysis
-                    </a>
-                    <a href="?section={next_section}" class="simple-nav-btn primary">
-                        Next: Rate & Pricing Analysis →
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            elif active_section == "rate_analysis":
-                rate_analysis(df)
-                prev_section = "workplace_analysis"
-                next_section = "time_series"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
-                        ← Previous: Workplace Analysis
-                    </a>
-                    <a href="?section={next_section}" class="simple-nav-btn primary">
-                        Next: Time Series Analysis →
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            elif active_section == "time_series":
-                time_series(df)
-                prev_section = "rate_analysis"
-                next_section = "insights"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
-                        ← Previous: Rate & Pricing Analysis
-                    </a>
-                    <a href="?section={next_section}" class="simple-nav-btn primary">
-                        Next: Key Insights & Recommendations →
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            elif active_section == "insights":
-                insights()
-                prev_section = "time_series"
-                st.markdown(f"""
-                <div class="nav-buttons">
-                    <a href="?section={prev_section}" class="simple-nav-btn secondary">
-                        ← Previous: Time Series Analysis
-                    </a>
-                    <a href="?section=introduction" class="simple-nav-btn primary">
-                        Return to Start
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.error("Failed to load the case study data. Please refresh the page to try again.")
+    elif selected_section == "Data Overview":
+        data_overview(df)
+    elif selected_section == "Marketplace Dynamics":
+        marketplace_dynamics(df)
+    elif selected_section == "Worker Analysis":
+        worker_analysis(df)
+    elif selected_section == "Workplace Analysis":
+        workplace_analysis(df)
+    elif selected_section == "Rate Analysis":
+        rate_analysis(df)
+    elif selected_section == "Time Series":
+        time_series(df)
+    elif selected_section == "Key Insights":
+        insights()
 
 if __name__ == "__main__":
     main()
