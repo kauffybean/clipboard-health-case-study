@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Page configuration
+# Page configuration settings
 st.set_page_config(
     page_title="CBH Marketplace Analysis",
     page_icon="📊",
