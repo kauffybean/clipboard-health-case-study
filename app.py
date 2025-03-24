@@ -172,53 +172,60 @@ if 'current_section' not in st.session_state:
 if 'completed_sections' not in st.session_state:
     st.session_state.completed_sections = []
 
-# Function to display the wizard navigation
-def display_wizard_navigation():
-    html = '<div class="wizard-container">'
+# Create wizard navigation at the top of the page
+st.markdown("<h2 style='text-align: center; margin-bottom: 1.5rem;'>CBH Marketplace Analysis</h2>", unsafe_allow_html=True)
+
+# Top wizard navigation
+wizard_cols = st.columns(len(SECTIONS))
+for i, section in enumerate(SECTIONS):
+    # Determine the state of this step
+    if section["id"] == st.session_state.current_section:
+        icon_class = "active"
+        label_class = "active"
+        icon = f"<div class='wizard-icon active'>{section['number']}</div>"
+    elif section["id"] in st.session_state.completed_sections:
+        icon_class = "completed"
+        label_class = "completed"
+        icon = f"<div class='wizard-icon completed'>✓</div>"
+    else:
+        icon_class = ""
+        label_class = ""
+        icon = f"<div class='wizard-icon'>{section['number']}</div>"
     
-    for i, section in enumerate(SECTIONS):
-        # Determine the state of this step
-        if section["id"] == st.session_state.current_section:
-            icon_class = "active"
-            label_class = "active"
-        elif section["id"] in st.session_state.completed_sections:
-            icon_class = "completed"
-            label_class = "completed"
-        else:
-            icon_class = ""
-            label_class = ""
-        
-        # Create the HTML for this step
-        html += f'''
-        <div class="wizard-step" onclick="window.location.href='?section={section["id"]}'">
-            <div class="wizard-icon {icon_class}">{section["number"]}</div>
+    # Create clickable navigation item
+    with wizard_cols[i]:
+        step_html = f"""
+        <div class="wizard-step" style="cursor: pointer;" onclick="parent.postMessage({{key: 'go_to_section', value: '{section["id"]}'}}, '*')">
+            {icon}
             <div class="wizard-label {label_class}">{section["name"]}</div>
         </div>
-        '''
-        
-        # Add connector if not the last item
-        if i < len(SECTIONS) - 1:
-            html += '<div class="wizard-connector"></div>'
+        """
+        st.markdown(step_html, unsafe_allow_html=True)
     
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+    # Add connector line between steps (in JS since it's more flexible)
+    if i < len(SECTIONS) - 1:
+        connector_color = "#10B981" if section["id"] in st.session_state.completed_sections else "#e5e7eb"
+        st.markdown(f"""
+        <div style="height: 2px; background-color: {connector_color}; width: 100%; margin-top: -15px;"></div>
+        """, unsafe_allow_html=True)
 
-# Sidebar navigation that shows the wizard status
-st.sidebar.title("Navigation")
+# Handle the navigation via on_click events
 for section in SECTIONS:
-    # Create an icon based on status
-    if section["id"] == st.session_state.current_section:
-        icon = "▶️"
-    elif section["id"] in st.session_state.completed_sections:
-        icon = "✅"
-    else:
-        icon = "⭕"
-    
-    # Create a clickable link
-    if st.sidebar.button(f"{icon} {section['name']}", key=section["id"]):
-        st.session_state.current_section = section["id"]
-        st.query_params["section"] = section["id"]
-        st.rerun()
+    if f"go_to_{section['id']}" not in st.session_state:
+        st.session_state[f"go_to_{section['id']}"] = False
+
+# JavaScript to handle the postMessage from the wizard navigation
+st.markdown("""
+<script>
+window.addEventListener('message', function(e) {
+    const data = e.data;
+    if (data.key === 'go_to_section') {
+        // Navigate to the section
+        window.location.href = '?section=' + data.value;
+    }
+});
+</script>
+""", unsafe_allow_html=True)
 
 # Check for section param in URL
 query_params = st.query_params
@@ -241,9 +248,9 @@ def go_to_next_section():
     
     # Move to next section if not at the end
     if current_index < len(SECTIONS) - 1:
-        st.session_state.current_section = SECTIONS[current_index + 1]["id"]
-        st.query_params["section"] = st.session_state.current_section
-        st.rerun()
+        next_section = SECTIONS[current_index + 1]["id"]
+        st.experimental_set_query_params(section=next_section)
+        st.session_state.current_section = next_section
 
 # Helper function to navigate to previous section
 def go_to_previous_section():
@@ -251,9 +258,17 @@ def go_to_previous_section():
     
     # Move to previous section if not at the beginning
     if current_index > 0:
-        st.session_state.current_section = SECTIONS[current_index - 1]["id"]
-        st.query_params["section"] = st.session_state.current_section
-        st.rerun()
+        prev_section = SECTIONS[current_index - 1]["id"]
+        st.experimental_set_query_params(section=prev_section)
+        st.session_state.current_section = prev_section
+
+# Helper function to go to a specific section
+# Helper function to navigate to a specific section by ID
+def go_to_section(section_id):
+    # Check if it's a valid section
+    if any(section["id"] == section_id for section in SECTIONS):
+        st.query_params["section"] = section_id
+        st.session_state.current_section = section_id
 
 # Introduction
 def introduction():
@@ -1152,17 +1167,10 @@ def insights():
     with col3:
         st.button("Restart Case Study", on_click=lambda: go_to_section("introduction"), type="primary")
 
-# Helper function to navigate to a specific section
-def go_to_section(section_id):
-    st.session_state.current_section = section_id
-    st.query_params["section"] = section_id
-    st.rerun()
+
 
 # Main function to control the app flow
 def main():
-    # Display the wizard navigation
-    display_wizard_navigation()
-    
     # Section routing based on selected section
     if st.session_state.current_section == "introduction":
         introduction()
