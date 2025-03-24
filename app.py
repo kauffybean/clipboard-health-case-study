@@ -338,9 +338,10 @@ def data_overview(df):
     st.markdown('<div style="margin-bottom: 1rem;"></div>', unsafe_allow_html=True)
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Total Records", f"{total_records:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Total Records", f"{total_records:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[1]:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
@@ -475,24 +476,28 @@ def marketplace_dynamics(df):
     st.markdown('<div style="margin-bottom: 1rem;"></div>', unsafe_allow_html=True)
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Total Shifts", f"{total_shifts:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Total Shifts", f"{total_shifts:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[1]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Total Views", f"{total_views:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Total Views", f"{total_views:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[2]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Total Claims", f"{total_claims:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Total Claims", f"{total_claims:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[3]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Completed Shifts", f"{total_completions:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Completed Shifts", f"{total_completions:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     # Conversion funnel visualization
     st.markdown("### Conversion Funnel")
@@ -675,24 +680,28 @@ def worker_analysis(df):
     st.markdown('<div style="margin-bottom: 1rem;"></div>', unsafe_allow_html=True)
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Total Workers", f"{total_workers:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Total Workers", f"{total_workers:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[1]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Active Workers", f"{active_workers:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Active Workers", f"{active_workers:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[2]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Avg Views per Worker", f"{avg_views_per_worker}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Avg Views per Worker", f"{avg_views_per_worker}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[3]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Workers Completing Shifts", f"{completed_workers:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Workers Completing Shifts", f"{completed_workers:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     # Worker distribution by activity level
     st.markdown("### Worker Activity Distribution")
@@ -874,24 +883,28 @@ def workplace_analysis(df):
     st.markdown('<div style="margin-bottom: 1rem;"></div>', unsafe_allow_html=True)
     metrics_cols = st.columns(4)
     with metrics_cols[0]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Total Workplaces", f"{total_workplaces:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Total Workplaces", f"{total_workplaces:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[1]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Avg Shifts per Workplace", f"{avg_shifts_per_workplace}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Avg Shifts per Workplace", f"{avg_shifts_per_workplace}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[2]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Max Shifts per Workplace", f"{max_shifts_per_workplace}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Max Shifts per Workplace", f"{max_shifts_per_workplace}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[3]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Avg Fill Rate", f"{avg_fill_rate}%")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("Avg Fill Rate", f"{avg_fill_rate}%")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     # Lead time analysis
     st.markdown("### Effect of Lead Time on Fill Rates")
@@ -1491,25 +1504,64 @@ def insights():
     with col3:
         st.button("Restart Case Study", on_click=lambda: go_to_section("introduction"), type="primary", use_container_width=True)
 
-# Main function to control the app flow
+# Main function with preloaded content
 def main():
-    # Section routing based on selected section
-    if st.session_state.current_section == "introduction":
-        introduction()
-    elif st.session_state.current_section == "data_overview":
-        data_overview(df)
-    elif st.session_state.current_section == "marketplace_dynamics":
-        marketplace_dynamics(df)
-    elif st.session_state.current_section == "worker_analysis":
-        worker_analysis(df)
-    elif st.session_state.current_section == "workplace_analysis":
-        workplace_analysis(df)
-    elif st.session_state.current_section == "rate_analysis":
-        rate_analysis(df)
-    elif st.session_state.current_section == "time_series":
-        time_series(df)
-    elif st.session_state.current_section == "insights":
-        insights()
+    # Create content container for each section
+    section_containers = {}
+    
+    # Pre-load all the content at once
+    for section in SECTIONS:
+        section_id = section["id"]
+        section_containers[section_id] = st.container()
+    
+    # Fill all containers with their content, but only display the current one
+    with section_containers["introduction"]:
+        if st.session_state.current_section == "introduction":
+            introduction()
+        else:
+            st.empty()
+    
+    with section_containers["data_overview"]:
+        if st.session_state.current_section == "data_overview":
+            data_overview(df)
+        else:
+            st.empty()
+    
+    with section_containers["marketplace_dynamics"]:
+        if st.session_state.current_section == "marketplace_dynamics":
+            marketplace_dynamics(df)
+        else:
+            st.empty()
+    
+    with section_containers["worker_analysis"]:
+        if st.session_state.current_section == "worker_analysis":
+            worker_analysis(df)
+        else:
+            st.empty()
+    
+    with section_containers["workplace_analysis"]:
+        if st.session_state.current_section == "workplace_analysis":
+            workplace_analysis(df)
+        else:
+            st.empty()
+    
+    with section_containers["rate_analysis"]:
+        if st.session_state.current_section == "rate_analysis":
+            rate_analysis(df)
+        else:
+            st.empty()
+    
+    with section_containers["time_series"]:
+        if st.session_state.current_section == "time_series":
+            time_series(df)
+        else:
+            st.empty()
+    
+    with section_containers["insights"]:
+        if st.session_state.current_section == "insights":
+            insights()
+        else:
+            st.empty()
 
 if __name__ == "__main__":
     main()
