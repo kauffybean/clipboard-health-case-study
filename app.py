@@ -38,16 +38,107 @@ SECTIONS = {
     "Key Insights & Recommendations": "insights"
 }
 
-# CSS hack to make plots more appealing
+# CSS to make the UI consistent and visually appealing
 st.markdown("""
     <style>
+        /* Define consistent color palette */
+        :root {
+            --primary-color: #3366CC;     /* Blue for main elements */
+            --secondary-color: #109618;   /* Green for success/completion */
+            --accent-color: #DC3912;      /* Red for highlights/conversion */
+            --neutral-color: #FF9900;     /* Orange for additional metrics */
+            --background-color: #F9FAFC;  /* Light background */
+            --light-gray: #E8EEF4;        /* For alternating rows */
+            --text-color: #333333;        /* Main text color */
+        }
+        
+        /* Overall layout styling */
         .stPlotlyChart {
             width: 100%;
         }
+        
         .main .block-container {
-            max-width: 1100px;
-            padding-top: 2rem;
-            padding-bottom: 2rem;
+            max-width: 1200px;
+            padding: 2rem 1rem;
+            background-color: var(--background-color);
+        }
+        
+        /* Typography styling */
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.2rem;
+            padding-top: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--light-gray);
+            margin-bottom: 1.5rem;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            padding-top: 1rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            color: var(--secondary-color);
+            font-size: 1.4rem;
+            padding-top: 0.8rem;
+        }
+        
+        /* Metric styling */
+        div[data-testid="stMetricValue"] {
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            color: var(--primary-color) !important;
+        }
+        
+        div[data-testid="stMetricLabel"] {
+            font-size: 1rem !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Table styling */
+        div[data-testid="stTable"] table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        div[data-testid="stTable"] thead tr th {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            font-weight: 600 !important;
+            padding: 8px 12px !important;
+        }
+        
+        /* Sidebar styling */
+        section[data-testid="stSidebar"] {
+            background-color: white;
+        }
+        
+        section[data-testid="stSidebar"] div.stRadio label {
+            font-weight: 500;
+            padding: 5px 0;
+        }
+        
+        /* Charts styling */
+        div.stPlotlyChart > div {
+            border-radius: 5px;
+            background-color: white !important;
+            padding: 1rem !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Tab styling */
+        button[data-baseweb="tab"] {
+            font-weight: 600;
+        }
+        
+        /* Code block styling */
+        div.stCodeBlock {
+            border-radius: 5px;
+            border-left: 3px solid var(--primary-color);
+        }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -758,10 +849,19 @@ def rate_analysis(df):
     ).reset_index()
     
     pay_rate_conv['conversion_rate'] = (pay_rate_conv['claimed'] / pay_rate_conv['total_views'] * 100).round(2)
-    pay_rate_conv['completion_rate'] = (pay_rate_conv['verified'] / pay_rate_conv['claimed'] * 100).round(2)
+    # Calculate completion rate safely
+    completion_mask = pay_rate_conv['claimed'] > 0
+    pay_rate_conv.loc[completion_mask, 'completion_rate'] = (
+        pay_rate_conv.loc[completion_mask, 'verified'] / 
+        pay_rate_conv.loc[completion_mask, 'claimed'] * 100
+    ).round(2)
+    # Set default value for rows where claimed is 0
+    pay_rate_conv.loc[~completion_mask, 'completion_rate'] = 0
     
     # Replace NaN with 0
-    pay_rate_conv = pay_rate_conv.fillna(0)
+    # Don't use fillna on categorical data
+    # Handle missing values in a way that works with categorical data
+    pay_rate_conv['conversion_rate'] = pay_rate_conv['conversion_rate'].fillna(0)
     
     rate_eff_fig = go.Figure()
     
@@ -981,7 +1081,7 @@ def insights():
     
     ### Worker Behavior
     - **Activity Distribution**: Top 20% of workers account for {top_workers_claim_share}% of all claimed shifts, showing a concentration of activity among power users.
-    - **Active Worker Base**: Out of {unique_workers:,} workers who viewed shifts, {active_workers:,} ({(active_workers/unique_workers*100).round(2)}%) claimed at least one shift.
+    - **Active Worker Base**: Out of {unique_workers:,} workers who viewed shifts, {active_workers:,} ({round(active_workers/unique_workers*100, 2)}%) claimed at least one shift.
     - **Rate Sensitivity**: The highest conversion rate of {best_rate['conversion_rate']}% occurs in the {best_rate['pay_rate_bin']} pay rate range, indicating a sweet spot for worker engagement.
     
     ### Workplace Patterns
