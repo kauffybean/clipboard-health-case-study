@@ -549,6 +549,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Initialize session state for navigation
+if 'active_section' not in st.session_state:
+    # Get 'section' query param from URL if it exists
+    query_params = st.query_params
+    if 'section' in query_params:
+        section = query_params['section']
+        if section in SECTIONS.values():
+            st.session_state['active_section'] = section
+        else:
+            st.session_state['active_section'] = 'introduction'
+    else:
+        st.session_state['active_section'] = 'introduction'
+
 # App title and introduction
 def introduction():
     st.title("CBH Marketplace Data Analysis")
@@ -1839,18 +1852,70 @@ def main():
     # Create sidebar for navigation
     st.sidebar.title("Navigation")
     
-    page = st.sidebar.radio("Go to", list(SECTIONS.keys()))
+    # Update active section when sidebar navigation is used
+    page = st.sidebar.radio("Go to", list(SECTIONS.keys()), 
+                           index=list(SECTIONS.values()).index(st.session_state['active_section']) 
+                           if st.session_state['active_section'] in SECTIONS.values() else 0)
     
-    if page == "Introduction":
+    # If the page changes via sidebar, update session state and URL
+    if SECTIONS[page] != st.session_state['active_section']:
+        st.session_state['active_section'] = SECTIONS[page]
+        st.query_params['section'] = SECTIONS[page]
+    
+    # Get current section from session state
+    active_section = st.session_state['active_section']
+    
+    # Create a navigation header with progress tracker
+    section_list = list(SECTIONS.values())
+    section_names = list(SECTIONS.keys())
+    curr_index = section_list.index(active_section) if active_section in section_list else 0
+    progress_percentage = int((curr_index / (len(section_list) - 1)) * 100) if len(section_list) > 1 else 0
+    
+    # Create the modern-looking progress tracker
+    progress_html = f"""
+    <div class="progress-tracker">
+        <div class="progress-bar" style="width: {progress_percentage}%;"></div>
+    """
+    
+    for i, (name, section) in enumerate(SECTIONS.items()):
+        if i < curr_index:
+            status = "completed"
+        elif i == curr_index:
+            status = "active"
+        else:
+            status = ""
+            
+        progress_html += f"""
+        <div class="step {status}">
+            {i+1}
+            <div class="step-label">{name}</div>
+        </div>
+        """
+    
+    progress_html += "</div>"
+    
+    st.markdown(progress_html, unsafe_allow_html=True)
+    
+    # Show active section content
+    if active_section == 'introduction':
         introduction()
         
         # Show data preview
         if 'data' in st.session_state:
             df = st.session_state['data']
-            st.subheader("CBH Marketplace Dataset Preview")
-            st.dataframe(df.head(10))
             
-            # Add key dataset metrics
+            # Executive summary card with key context
+            st.markdown("""
+            <div class="executive-summary">
+                <h3>Clipboard Health: Two-Sided Healthcare Marketplace</h3>
+                <p>CBH operates a marketplace connecting healthcare workers with facilities for per diem shifts.</p>
+                <p>This interactive case study explores key marketplace metrics, user behaviors, and optimization opportunities.</p>
+                <p>We'll analyze conversion rates, pricing factors, and temporal patterns to uncover actionable insights.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Modern metrics display
+            st.subheader("Dataset at a Glance")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Total Records", f"{len(df):,}")
@@ -1861,43 +1926,126 @@ def main():
             with col4:
                 st.metric("Unique Shifts", f"{df['shift_id'].nunique():,}")
             
+            # Preview table in a card
             st.markdown("""
-            ### Interactive Case Study
-            This analysis explores the CBH marketplace data to uncover key patterns, behaviors, and opportunities.
-            Use the navigation sidebar to explore different aspects of the analysis, including marketplace dynamics,
-            worker behavior, workplace patterns, and pricing strategies.
+            <div style="background-color: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 2rem 0;">
+                <h3 style="margin-top: 0; color: var(--primary-dark);">Data Preview</h3>
+            """, unsafe_allow_html=True)
+            st.dataframe(df.head(5), height=200)
+            st.markdown("</div>", unsafe_allow_html=True)
             
-            ### Key Questions Explored:
-            1. What factors influence marketplace conversion rates?
-            2. How do worker preferences and behaviors impact the marketplace?
-            3. What patterns exist in workplace posting and fulfillment?
-            4. How does pricing affect worker engagement and marketplace efficiency?
-            5. What recommendations can be made to improve marketplace performance?
-            
-            Navigate through the sections to explore these questions and discover insights from the data.
-            """)
-    
-    # All sections now have data access
-    elif 'data' in st.session_state:
-        df = st.session_state['data']
-        
-        if page == "Data Overview":
-            data_overview(df)
-        elif page == "Marketplace Dynamics":
-            marketplace_dynamics(df)
-        elif page == "Worker Analysis":
-            worker_analysis(df)
-        elif page == "Workplace Analysis":
-            workplace_analysis(df)
-        elif page == "Rate & Pricing Analysis":
-            rate_analysis(df)
-        elif page == "Time Series Analysis":
-            time_series(df)
-        elif page == "Key Insights & Recommendations":
-            insights()
-    
+            # Navigation button to start journey
+            st.markdown("""
+            <div class="nav-buttons" style="justify-content: center;">
+                <a href="?section=data_overview" class="nav-button primary" style="font-size: 1.1rem; padding: 0.8rem 2rem;">
+                    Begin Analysis Journey
+                    <span style="margin-left: 8px;">→</span>
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.error("Failed to load the case study data. Please refresh the page to try again.")
+        if 'data' in st.session_state:
+            df = st.session_state['data']
+            # Call the appropriate section function
+            if active_section == "data_overview":
+                data_overview(df)
+                # Add professional navigation buttons
+                next_section = "marketplace_dynamics"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section=introduction" class="nav-button secondary">
+                        ← Back to Introduction
+                    </a>
+                    <a href="?section={next_section}" class="nav-button primary">
+                        Next: Marketplace Dynamics →
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+            elif active_section == "marketplace_dynamics":
+                marketplace_dynamics(df)
+                prev_section = "data_overview"
+                next_section = "worker_analysis"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section={prev_section}" class="nav-button secondary">
+                        ← Previous: Data Overview
+                    </a>
+                    <a href="?section={next_section}" class="nav-button primary">
+                        Next: Worker Analysis →
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+            elif active_section == "worker_analysis":
+                worker_analysis(df)
+                prev_section = "marketplace_dynamics"
+                next_section = "workplace_analysis"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section={prev_section}" class="nav-button secondary">
+                        ← Previous: Marketplace Dynamics
+                    </a>
+                    <a href="?section={next_section}" class="nav-button primary">
+                        Next: Workplace Analysis →
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+            elif active_section == "workplace_analysis":
+                workplace_analysis(df)
+                prev_section = "worker_analysis"
+                next_section = "rate_analysis"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section={prev_section}" class="nav-button secondary">
+                        ← Previous: Worker Analysis
+                    </a>
+                    <a href="?section={next_section}" class="nav-button primary">
+                        Next: Rate & Pricing Analysis →
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+            elif active_section == "rate_analysis":
+                rate_analysis(df)
+                prev_section = "workplace_analysis"
+                next_section = "time_series"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section={prev_section}" class="nav-button secondary">
+                        ← Previous: Workplace Analysis
+                    </a>
+                    <a href="?section={next_section}" class="nav-button primary">
+                        Next: Time Series Analysis →
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+            elif active_section == "time_series":
+                time_series(df)
+                prev_section = "rate_analysis"
+                next_section = "insights"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section={prev_section}" class="nav-button secondary">
+                        ← Previous: Rate & Pricing Analysis
+                    </a>
+                    <a href="?section={next_section}" class="nav-button primary">
+                        Next: Key Insights & Recommendations →
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+            elif active_section == "insights":
+                insights()
+                prev_section = "time_series"
+                st.markdown(f"""
+                <div class="nav-buttons">
+                    <a href="?section={prev_section}" class="nav-button secondary">
+                        ← Previous: Time Series Analysis
+                    </a>
+                    <a href="?section=introduction" class="nav-button primary">
+                        Return to Start
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.error("Failed to load the case study data. Please refresh the page to try again.")
 
 if __name__ == "__main__":
     main()
