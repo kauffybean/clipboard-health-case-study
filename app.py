@@ -125,6 +125,14 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         border: 1px solid #e5e7eb;
         text-align: center !important;
+        margin: 0.5rem 0;
+        height: 100%;
+    }
+    
+    /* Ensure metrics stay inside cards */
+    .metric-container {
+        padding: 0 !important;
+        margin: 0 !important;
     }
     
     /* Block container */
@@ -344,19 +352,22 @@ def data_overview(df):
             st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[1]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Unique Shifts", f"{unique_shifts:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card metric-container">', unsafe_allow_html=True)
+            st.metric("Unique Shifts", f"{unique_shifts:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[2]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Unique Workers", f"{unique_workers:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card metric-container">', unsafe_allow_html=True)
+            st.metric("Unique Workers", f"{unique_workers:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     with metrics_cols[3]:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Unique Workplaces", f"{unique_workplaces:,}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="metric-card metric-container">', unsafe_allow_html=True)
+            st.metric("Unique Workplaces", f"{unique_workplaces:,}")
+            st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown(f"**Date Range:** {min_date} to {max_date}")
     
@@ -1506,62 +1517,24 @@ def insights():
 
 # Main function with preloaded content
 def main():
-    # Create content container for each section
-    section_containers = {}
-    
-    # Pre-load all the content at once
-    for section in SECTIONS:
-        section_id = section["id"]
-        section_containers[section_id] = st.container()
-    
-    # Fill all containers with their content, but only display the current one
-    with section_containers["introduction"]:
-        if st.session_state.current_section == "introduction":
-            introduction()
-        else:
-            st.empty()
-    
-    with section_containers["data_overview"]:
-        if st.session_state.current_section == "data_overview":
-            data_overview(df)
-        else:
-            st.empty()
-    
-    with section_containers["marketplace_dynamics"]:
-        if st.session_state.current_section == "marketplace_dynamics":
-            marketplace_dynamics(df)
-        else:
-            st.empty()
-    
-    with section_containers["worker_analysis"]:
-        if st.session_state.current_section == "worker_analysis":
-            worker_analysis(df)
-        else:
-            st.empty()
-    
-    with section_containers["workplace_analysis"]:
-        if st.session_state.current_section == "workplace_analysis":
-            workplace_analysis(df)
-        else:
-            st.empty()
-    
-    with section_containers["rate_analysis"]:
-        if st.session_state.current_section == "rate_analysis":
-            rate_analysis(df)
-        else:
-            st.empty()
-    
-    with section_containers["time_series"]:
-        if st.session_state.current_section == "time_series":
-            time_series(df)
-        else:
-            st.empty()
-    
-    with section_containers["insights"]:
-        if st.session_state.current_section == "insights":
-            insights()
-        else:
-            st.empty()
+    # Display only the current section directly
+    # This approach reduces loading time as we're not pre-rendering all content
+    if st.session_state.current_section == "introduction":
+        introduction()
+    elif st.session_state.current_section == "data_overview":
+        data_overview(df)
+    elif st.session_state.current_section == "marketplace_dynamics":
+        marketplace_dynamics(df)
+    elif st.session_state.current_section == "worker_analysis":
+        worker_analysis(df)
+    elif st.session_state.current_section == "workplace_analysis":
+        workplace_analysis(df)
+    elif st.session_state.current_section == "rate_analysis":
+        rate_analysis(df)
+    elif st.session_state.current_section == "time_series":
+        time_series(df)
+    elif st.session_state.current_section == "insights":
+        insights()
 
 if __name__ == "__main__":
     main()
