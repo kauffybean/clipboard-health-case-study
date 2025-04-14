@@ -1,7 +1,18 @@
-# CBH Marketplace Analysis
+# CBH Marketplace Analysis – Replit Vibe Coding Goes Analyst Mode
 
-![CBH Marketplace Analysis](generated-icon.png)
+**A data analysis engine disguised as a case study.**
 
+🔗 [Live Demo](https://anna-case-study-cbh.replit.app/)
+
+---
+
+## Why I Built This
+
+Clipboard Health’s first interview screen is a case study — basically, solve this data analysis prompt and *maybe* we’ll talk to you. I saw some horror stories about this process on Reddit and TikTok and thought: why not just build something fun and see what happens?
+
+So instead of answering in a doc or Jupyter notebook, I built a full exploratory analysis platform in Replit using Streamlit. It was kind of a flex, kind of a test of how good Replit is for analysis work. TL;DR: it worked. No interview, but no regrets. This was fun as hell.
+
+---
 ## Project Overview
 
 A comprehensive data analysis platform built with Streamlit that provides interactive exploration of CBH (Clipboard Health) marketplace data. This application serves as a case study demonstrating how to analyze a two-sided healthcare marketplace where workers book per diem shifts with workplaces.
