@@ -10,7 +10,7 @@
 
 Clipboard Health’s first interview screen is a case study — basically, solve this data analysis prompt and *maybe* we’ll talk to you. I saw some horror stories about this process on Reddit and TikTok and thought: why not just build something fun and see what happens?
 
-So instead of answering in a doc or Jupyter notebook, I built a full exploratory analysis platform in Replit using Streamlit. It was kind of a flex, kind of a test of how good Replit is for analysis work. TL;DR: it worked. No interview, but no regrets. This was fun as hell.
+So instead of answering in a doc or Jupyter notebook, I built a full exploratory analysis platform in Replit using Streamlit. It was kind of a flex, kind of a test of how good Replit is for analysis work. TL;DR: it worked. 
 
 ---
 ## Project Overview
